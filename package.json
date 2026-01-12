@@ -1,0 +1,19 @@
+{
+  "name": "community-agent-spine",
+  "version": "1.0.0",
+  "description": "Spine for Community Manager Agent",
+  "main": "dist/agent.js",
+  "scripts": {
+    "start": "ts-node src/main.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "date-fns": "^2.30.0"
+  }
+}
