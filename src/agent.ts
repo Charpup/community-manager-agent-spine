@@ -53,13 +53,22 @@ export class CommunityAgent {
             caseRec.lastMessageAtMs = ev.timestampMs;
             // If the user replies again, typically we're back in progress.
             if (caseRec.status === "WAITING_USER") {
+                const prevStatus = caseRec.status;
                 caseRec.status = "IN_PROGRESS";
+                // 审计日志: STATUS_CHANGED (延后到 upsert 后记录)
             }
         }
 
         // Persist the case update and the raw message
         await this.cases.upsertCase(caseRec);
         await this.cases.recordMessage(caseRec.caseId, normalized);
+
+        // 审计日志: TRIAGED
+        await this.cases.appendAction(caseRec.caseId, {
+            type: "TRIAGED",
+            atMs: Date.now(),
+            payload: triage,
+        });
 
         // Alert on critical categories or high severity
         if (triage.severity === "critical") {
@@ -75,6 +84,12 @@ export class CommunityAgent {
             caseRec.status = "ESCALATED";
             caseRec.assignedTo = "human";
             await this.cases.upsertCase(caseRec);
+            // 审计日志: ESCALATED
+            await this.cases.appendAction(caseRec.caseId, {
+                type: "ESCALATED",
+                atMs: Date.now(),
+                payload: { reason: triage.escalationReason ?? "policy gate" },
+            });
             await this.cases.appendCaseNote(
                 caseRec.caseId,
                 `Escalated: ${triage.escalationReason ?? "policy gate"}`
@@ -91,6 +106,12 @@ export class CommunityAgent {
             caseRec.status = "ESCALATED";
             caseRec.assignedTo = "human";
             await this.cases.upsertCase(caseRec);
+            // 审计日志: ESCALATED (guardrails)
+            await this.cases.appendAction(caseRec.caseId, {
+                type: "ESCALATED",
+                atMs: Date.now(),
+                payload: { reason: "guardrails rejected reply" },
+            });
             await this.cases.appendCaseNote(caseRec.caseId, "Escalated: guardrails rejected reply");
             return;
         }
@@ -99,9 +120,27 @@ export class CommunityAgent {
         await this.connector.sendReply(ev.threadId, approved.text);
         caseRec.lastAgentActionAtMs = Date.now();
 
+        // 审计日志: AUTO_REPLIED
+        await this.cases.appendAction(caseRec.caseId, {
+            type: "AUTO_REPLIED",
+            atMs: Date.now(),
+            payload: { text: approved.text.substring(0, 100) + "..." },
+        });
+
         // If we asked user for more info, we wait.
+        const prevStatus = caseRec.status;
         caseRec.status = approved.requiresUserInfo?.length ? "WAITING_USER" : "RESOLVED";
         await this.cases.upsertCase(caseRec);
+
+        // 审计日志: STATUS_CHANGED
+        if (prevStatus !== caseRec.status) {
+            await this.cases.appendAction(caseRec.caseId, {
+                type: "STATUS_CHANGED",
+                atMs: Date.now(),
+                payload: { from: prevStatus, to: caseRec.status },
+            });
+        }
+
         await this.cases.appendCaseNote(caseRec.caseId, `Auto-replied. Status=${caseRec.status}`);
     }
 
@@ -135,8 +174,9 @@ export class CommunityAgent {
             return { category: "abuse", severity: "medium", autoAllowed: true };
         }
 
-        // Heuristics
-        if (/(pay|payment|credit|card|充值|支付|扣款)/i.test(msg.text)) {
+        // Heuristics - Payment detection (expanded keywords)
+        const paymentRe = /(pay|paid|payment|purchase|purchased|charge|charged|credit|card|充值|支付|扣款|购买)/i;
+        if (paymentRe.test(msg.text)) {
             return { category: "payment", severity: "high", autoAllowed: true };
         }
         if (/(login|验证码|登录|无法进入|bind|绑定)/i.test(msg.text)) {

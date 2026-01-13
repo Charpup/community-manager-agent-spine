@@ -70,6 +70,13 @@ export type CaseRecord = {
     notes?: string[];
 };
 
+// 操作审计日志类型
+export type CaseAction =
+    | { type: "TRIAGED"; atMs: number; payload: any }
+    | { type: "AUTO_REPLIED"; atMs: number; payload: { text: string } }
+    | { type: "ESCALATED"; atMs: number; payload: { reason: string } }
+    | { type: "STATUS_CHANGED"; atMs: number; payload: { from: string; to: string } };
+
 export interface InboxConnector {
     channel: Channel;
     fetchNewMessages(sinceMs: number): Promise<MessageEvent[]>;
@@ -80,6 +87,7 @@ export interface CaseRepository {
     getCaseByThread(channel: Channel, threadId: string): Promise<CaseRecord | null>;
     upsertCase(rec: CaseRecord): Promise<void>;
     appendCaseNote(caseId: string, note: string): Promise<void>;
+    appendAction(caseId: string, action: CaseAction): Promise<void>;  // 审计日志
     recordMessage(caseId: string, msg: NormalizedMessage): Promise<void>;
     listOpenCasesForRescan(nowMs: number): Promise<CaseRecord[]>;
     aggregateDailyReport(dayStartMs: number, dayEndMs: number): Promise<any>;

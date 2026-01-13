@@ -9,6 +9,7 @@ import {
     NormalizedMessage,
     EvidencePack,
     CaseStatus,
+    CaseAction,
 } from "./types";
 
 /* -------------------------------------------------------------------------- */
@@ -52,6 +53,7 @@ export class MockInboxConnector implements InboxConnector {
 export class InMemoryCaseRepository implements CaseRepository {
     private cases = new Map<string, CaseRecord>();
     private messageLog = new Map<string, NormalizedMessage[]>();
+    private actionsByCaseId = new Map<string, CaseAction[]>();
 
     async getCaseByThread(channel: Channel, threadId: string): Promise<CaseRecord | null> {
         const key = `${channel}-${threadId}`;
@@ -70,6 +72,13 @@ export class InMemoryCaseRepository implements CaseRepository {
             c.notes.push(note);
             console.log(`[CaseRepo] NOTE on ${caseId}: ${note}`);
         }
+    }
+
+    async appendAction(caseId: string, action: CaseAction): Promise<void> {
+        const actions = this.actionsByCaseId.get(caseId) || [];
+        actions.push(action);
+        this.actionsByCaseId.set(caseId, actions);
+        console.log(`[CaseRepo] ACTION on ${caseId}: ${action.type}`);
     }
 
     async recordMessage(caseId: string, msg: NormalizedMessage): Promise<void> {
