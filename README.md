@@ -2,66 +2,90 @@
 
 > **An event-driven, engineering-first approach to automated community management.**
 
-This project implements the **Spine** (Backbone) for a Community Manager Agent. Unlike simple chatbots, this system treats community interactions as a structured engineering pipeline: **Cruise -> Triage -> Execute -> Trace -> Report**.
-
-It is designed to be **Pluggable**, **Auditable**, and **Safe**.
+This project implements the **Spine** (Backbone) for a Community Manager Agent. It connects to **Facebook Business Inbox** via Graph API and persists data to **SQLite**.
 
 ## 🏗 Architecture
 
-The system follows a modular "Spine" architecture where the core logic is decoupled from specific platforms (like Facebook) or databases.
-
 ```mermaid
-graph TD
-    A[External Sources\nFB/Discord/Email] -->|Connector| B(Event Bus\nMessageEvent)
-    B --> C{Orchestrator\nAgent Spine}
-    C -->|Triage & Guardrails| D[Policy & Knowledge]
-    C -->|State| E[Case System\nSQLite/Postgres]
-    C -->|Action| F[Reply / Escalate]
-    C -->|Observability| G[Daily Reports & Alerts]
+graph LR
+    A[Facebook Inbox] -->|Graph API| B[FacebookConnector]
+    B --> C{Agent Spine}
+    C --> D[SQLite DB]
+    C --> E[Reply via API]
+    C --> F[Daily Reports]
 ```
 
-### Core Components
-
-1.  **Connector Layer**: Adapters that normalize inputs from various sources (FB Business, Slack, etc.) into standard `MessageEvents`.
-2.  **Agent Spine**: The central loop that processes messages.
-    *   **Triage**: Rule-based categorization (Payment, Bug, Abuse) with strict severity gates.
-    *   **Guardrails**: Safety checks preventing hallucinations, promise-making, or sensitive data requests.
-    *   **Composition**: Template-first reply generation reinforced by RAG (Retrieval Augmented Generation).
-3.  **Case System**: Tracks every thread as a "Case" with a lifecycle (`NEW` -> `WAITING` -> `RESOLVED` -> `ESCALATED`).
-4.  **Observability**: Automated daily reports and real-time alerts for critical issues.
-
-## 🚀 Design Intent
-
-*   **Engineering over Chat**: We prioritize structure over "human-like" conversation. Every action is tracked in a Case.
-*   **Safety First**: The agent defaults to escalation. It never guesses.
-*   **Extensible**: Currently implemented with **Mocks** for immediate verification. Real implementation involves swapping `src/mocks.ts` with real API adapters.
-
-## 🛠 Project Structure
-
-*   `src/agent.ts`: **The Core**. Contains the main event loop, triage logic, and guardrails.
-*   `src/types.ts`: Domain definitions (`CaseRecord`, `MessageEvent`, `TriageDecision`).
-*   `src/mocks.ts`: **Adapters**. Currently contains In-Memory implementations for the DB and Inbox.
-*   `src/main.ts`: **Runner**. A simulation script to verify the logic flow locally.
-
-## 📦 Usage
+## 🚀 Quick Start
 
 ### Prerequisites
-*   Node.js v18+
-*   npm
+- Node.js v18+
+- Facebook Page with Messaging enabled
+- Page Access Token with `pages_messaging` permission
 
 ### Setup
+
+1. **Clone and install**
 ```bash
+git clone https://github.com/Charpup/community-manager-agent-spine.git
+cd community-manager-agent-spine
 npm install
 ```
 
-### Run Verification
-Run the simulation script to see the agent handle payment issues, collect details, and escalate critical requests.
+2. **Configure environment**
 ```bash
-npx ts-node src/main.ts
+cp .env.example .env
+# Edit .env with your Facebook credentials
 ```
 
+3. **Run in test mode (mocks)**
+```bash
+npm run test
+```
+
+4. **Run in production mode (real Facebook + SQLite)**
+```bash
+npm run dev
+```
+
+## ⚙️ Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `FB_PAGE_ID` | Yes | - | Your Facebook Page ID |
+| `FB_PAGE_ACCESS_TOKEN` | Yes | - | Page Access Token |
+| `POLL_INTERVAL_MS` | No | 15000 | Polling interval in ms |
+| `SQLITE_PATH` | No | ./data/cm_agent.sqlite | SQLite database path |
+| `NODE_ENV` | No | - | Set to `test` for mock mode |
+
+## 📁 Project Structure
+
+```
+src/
+├── agent.ts           # Core logic: Triage, Guardrails, Reply
+├── config.ts          # Environment config loader
+├── scheduler.ts       # Rescan scheduler
+├── mocks.ts           # In-memory mocks for testing
+├── connectors/
+│   └── facebook.ts    # Facebook Graph API connector
+├── repo/
+│   ├── migrations.sql # SQLite schema
+│   └── sqlite.ts      # SQLite repository
+└── runtime/
+    └── poller.ts      # Poll loop
+```
+
+## ✅ Features
+
+- [x] **Triage**: Auto-categorize messages (payment, bug, refund, etc.)
+- [x] **Guardrails**: Safety checks before auto-reply
+- [x] **De-duplication**: Same message won't be processed twice
+- [x] **Audit Trail**: All actions logged to database
+- [x] **Daily Reports**: Auto-generated summaries
+
 ## 📝 Roadmap
-- [x] **Spine V1**: Core Event Loop & Logic
-- [ ] **Connector**: Facebook Graph API Integration
-- [ ] **Storage**: SQLite / Postgres Adapter
-- [ ] **Intelligence**: LLM-based Intent Classification (Replacing regex heuristics)
+
+- [x] Spine V1: Core Event Loop & Logic
+- [x] Spine V2: Payment regex fix, Scheduler, Audit logging
+- [x] Spine V3: Facebook Graph API + SQLite persistence
+- [ ] LLM-based Intent Classification
+- [ ] Multi-platform support (Discord, Email)

@@ -61,7 +61,17 @@ export class CommunityAgent {
 
         // Persist the case update and the raw message
         await this.cases.upsertCase(caseRec);
-        await this.cases.recordMessage(caseRec.caseId, normalized);
+
+        // 尝试记录消息，如果是重复消息则跳过处理
+        try {
+            await this.cases.recordMessage(caseRec.caseId, normalized);
+        } catch (err: any) {
+            if (err.name === "DuplicateMessageError") {
+                console.log(`[Agent] Skipping duplicate message: ${ev.messageId}`);
+                return; // 不继续处理，不回复
+            }
+            throw err; // 其他错误重新抛出
+        }
 
         // 审计日志: TRIAGED
         await this.cases.appendAction(caseRec.caseId, {
