@@ -1,0 +1,32 @@
+{
+  "name": "community-agent-spine",
+  "version": "2.0.0",
+  "description": "Spine for Community Manager Agent - Facebook Inbox + SQLite",
+  "main": "dist/agent.js",
+  "scripts": {
+    "start": "ts-node src/main.ts",
+    "dev": "ts-node-dev --respawn --transpile-only --poll src/main.ts",
+    "test": "NODE_ENV=test ts-node src/main.ts",
+    "build": "tsc"
+  },
+  "keywords": [
+    "facebook",
+    "community",
+    "agent",
+    "customer-service"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^9.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0",
+    "ts-node-dev": "^2.0.0",
+    "@types/node": "^20.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "date-fns": "^2.30.0"
+  }
+}
