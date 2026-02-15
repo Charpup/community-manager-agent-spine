@@ -1,0 +1,131 @@
+# SPEC.yaml — v0.4 SDK Backend Connector
+# TDD+SDD Specification for community-manager-agent-spine
+
+spec_version: "1.1.0"
+skill_name: community-manager-agent-spine
+version: "0.4.0"
+description: |
+  SDK Backend Connector for community manager agent.
+  Provides read-only access to SDK backend customer service tickets.
+
+interfaces:
+  - name: SDKBackendConnector
+    type: class
+    implements: InboxConnector
+    file: src/connectors/sdk-backend.ts
+    contracts:
+      preconditions:
+        - SDK_BACKEND_TOKEN is set in environment
+        - SDK_BACKEND_BASE_URL is valid URL
+      postconditions:
+        - fetchNewMessages returns array of MessageEvent
+        - sendReply throws error (read-only mode)
+        - 401 errors produce clear error message
+    methods:
+      - name: fetchNewMessages
+        signature: (sinceMs: number) => Promise<MessageEvent[]>
+        scenarios:
+          - name: successfully_fetch_tickets
+            given:
+              - Valid SDK_BACKEND_TOKEN
+              - Tickets exist in backend
+            when: fetchNewMessages called with sinceMs=0
+            then:
+              - Returns array of MessageEvent
+              - Each event has channel='sdk_backend'
+              - Messages sorted by timestamp ascending
+          - name: handle_token_expiration
+            given:
+              - Expired/invalid SDK_BACKEND_TOKEN
+            when: fetchNewMessages called
+            then:
+              - Throws error with message '[SDK-BACKEND] Token expired...'
+              - Suggests updating .env file
+          - name: empty_ticket_list
+            given:
+              - Valid token
+              - No tickets in backend
+            when: fetchNewMessages called
+            then:
+              - Returns empty array
+      - name: sendReply
+        signature: (threadId: string, text: string) => Promise<void>
+        scenarios:
+          - name: read_only_mode
+            given:
+              - Any threadId and text
+            when: sendReply called
+            then:
+              - Throws Error with message 'SDK Backend reply API not available — read-only mode'
+
+  - name: SDKBackendMockConnector
+    type: class
+    file: src/connectors/sdk-backend-mock.ts
+    contracts:
+      preconditions: []
+      postconditions:
+        - Returns mock data without network calls
+        - Supports multi-language mock tickets
+    scenarios:
+      - name: generate_mock_tickets
+        given:
+          - NODE_ENV=test
+        when: fetchNewMessages called
+        then:
+          - Returns realistic mock tickets
+          - Includes Chinese and English samples
+
+  - name: Config
+    type: interface_extension
+    file: src/config.ts
+    additions:
+      - sdkBackendToken: string
+      - sdkBackendBaseUrl: string
+      - sdkBackendPollIntervalMs: number
+      - sdkBackendGameId?: number
+      - sdkBackendPkgId?: number
+
+  - name: Poller
+    type: function_extension
+    file: src/runtime/poller.ts
+    contracts:
+      preconditions:
+        - Channel type is 'sdk_backend'
+      postconditions:
+        - Polls SDK backend at configured interval
+        - Handles errors gracefully without crashing
+
+end_to_end_tests:
+  - name: mock_mode_integration
+    steps:
+      - Set NODE_ENV=test
+      - Set CHANNEL=sdk_backend
+      - Start agent
+      - Verify mock tickets are processed
+      - Verify SQLite records created
+    expected:
+      - Process completes without errors
+      - Database contains ticket records
+
+  - name: token_expiration_handling
+    steps:
+      - Set SDK_BACKEND_TOKEN=invalid_token
+      - Start agent
+      - Wait for first poll
+    expected:
+      - Error message displayed to console
+      - Agent does not crash
+      - Suggests updating .env file
+
+acceptance_criteria:
+  - npm run test executes successfully with sdk_backend mock
+  - Real token can fetch production tickets
+  - Token expiration produces clear error message
+  - No give parameter is ever sent to API
+  - All API calls include proper Authorization header
+
+constraints:
+  - "NEVER send give=1 parameter to chatlist API"
+  - "Token must come from environment variables only"
+  - "All errors must be logged clearly"
+  - "Polling interval must be >= 30000ms for production"

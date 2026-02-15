@@ -1,4 +1,4 @@
-export type Channel = "facebook" | "mock_channel";
+export type Channel = "facebook" | "mock_channel" | "sdk_backend";
 
 export type MessageEvent = {
     channel: Channel;
