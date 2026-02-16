@@ -86,23 +86,7 @@
 <a name='L21'></a><a href='#L21'>21</a>
 <a name='L22'></a><a href='#L22'>22</a>
 <a name='L23'></a><a href='#L23'>23</a>
-<a name='L24'></a><a href='#L24'>24</a>
-<a name='L25'></a><a href='#L25'>25</a>
-<a name='L26'></a><a href='#L26'>26</a>
-<a name='L27'></a><a href='#L27'>27</a>
-<a name='L28'></a><a href='#L28'>28</a>
-<a name='L29'></a><a href='#L29'>29</a>
-<a name='L30'></a><a href='#L30'>30</a>
-<a name='L31'></a><a href='#L31'>31</a>
-<a name='L32'></a><a href='#L32'>32</a>
-<a name='L33'></a><a href='#L33'>33</a>
-<a name='L34'></a><a href='#L34'>34</a>
-<a name='L35'></a><a href='#L35'>35</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L24'></a><a href='#L24'>24</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -116,54 +100,37 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
- * 格式化持续时间
- * @param ms 毫秒
- * @returns 例如 "1h 32m 15s"
- */
-<span class="cstat-no" title="statement not covered" >export function <span class="fstat-no" title="function not covered" >f</span>ormatDuration(</span>ms: number): string {
-    const seconds = <span class="cstat-no" title="statement not covered" >Math.floor(ms / 1000);</span>
-    const minutes = <span class="cstat-no" title="statement not covered" >Math.floor(seconds / 60);</span>
-    const hours = <span class="cstat-no" title="statement not covered" >Math.floor(minutes / 60);</span>
-    
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (hours &gt; 0) {</span>
-<span class="cstat-no" title="statement not covered" >        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;</span>
-    }
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (minutes &gt; 0) {</span>
-<span class="cstat-no" title="statement not covered" >        return `${minutes}m ${seconds % 60}s`;</span>
-    }
-<span class="cstat-no" title="statement not covered" >    return `${seconds}s`;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >export function <span class="fstat-no" title="function not covered" >f</span>ormatDuration(</span>ms: number): string {
+  const seconds = <span class="cstat-no" title="statement not covered" >Math.floor(ms / 1000);</span>
+  const minutes = <span class="cstat-no" title="statement not covered" >Math.floor(seconds / 60);</span>
+  const hours = <span class="cstat-no" title="statement not covered" >Math.floor(minutes / 60);</span>
+  
+<span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (hours &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >    return `${hours}h ${minutes % 60}m ${seconds % 60}s`;</span>
+  }
+<span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (minutes &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >    return `${minutes}m ${seconds % 60}s`;</span>
+  }
+<span class="cstat-no" title="statement not covered" >  return `${seconds}s`;</span>
 }
 &nbsp;
-/**
- * 格式化百分比
- */
 <span class="cstat-no" title="statement not covered" >export function <span class="fstat-no" title="function not covered" >f</span>ormatPercentage(</span>count: number, total: number): string {
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (total === 0) <span class="cstat-no" title="statement not covered" >return '0.0%';</span></span>
-<span class="cstat-no" title="statement not covered" >    return ((count / total) * 100).toFixed(1) + '%';</span>
+<span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (total === 0) <span class="cstat-no" title="statement not covered" >return '0.0%';</span></span>
+<span class="cstat-no" title="statement not covered" >  return ((count / total) * 100).toFixed(1) + '%';</span>
 }
 &nbsp;
-/**
- * 格式化日期 (中文)
- */
 <span class="cstat-no" title="statement not covered" >export function <span class="fstat-no" title="function not covered" >f</span>ormatDateCN(</span>timestamp: number): string {
-    const date = <span class="cstat-no" title="statement not covered" >new Date(timestamp);</span>
-<span class="cstat-no" title="statement not covered" >    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;</span>
+  const date = <span class="cstat-no" title="statement not covered" >new Date(timestamp);</span>
+<span class="cstat-no" title="statement not covered" >  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;</span>
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -172,7 +139,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-16T12:13:46.587Z
+                at 2026-02-16T15:09:35.115Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

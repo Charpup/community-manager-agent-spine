@@ -200,16 +200,17 @@ export class CommunityAgent {
     }
 
     private async triage(msg: NormalizedMessage): Promise<TriageDecision> {
-        // Step 1: 检测语言
+        // Step 1: 检测语言 (多语言支持)
         const detected_language = detectLanguage(msg.text);
+        console.log(`[Triage] Language detected: ${detected_language}`);
 
-        // Step 2: 尝试 LLM 分类
+        // Step 2: 尝试 LLM 分类 (传递语言信息以获得更好的多语言分类结果)
         let result: LLMClassificationResult;
         let source: 'llm' | 'keyword';
 
         if (this.llmClient && this.config?.llmFallbackEnabled !== false) {
             try {
-                // 尝试 LLM 分类
+                // 尝试 LLM 分类，传入检测到的语言以优化多语言理解
                 const llmResult = await this.llmClient.classifyTicket(
                     msg.text,
                     detected_language
@@ -218,17 +219,17 @@ export class CommunityAgent {
                 result = llmResult;
                 source = 'llm';
 
-                console.log(`[Triage] LLM classification: ${result.category} (${result.confidence})`);
+                console.log(`[Triage] LLM classification [${detected_language}]: ${result.category} (${result.confidence})`);
 
             } catch (error: any) {
-                // LLM 失败，降级到关键词
+                // LLM 失败，降级到多语言关键词匹配
                 console.warn(`[Triage] LLM failed, falling back to keywords: ${error.message}`);
 
                 result = this.classifyWithKeywordsFallback(msg.text, detected_language);
                 source = 'keyword';
             }
         } else {
-            // 未配置 LLM，直接使用关键词
+            // 未配置 LLM，使用多语言关键词分类
             result = this.classifyWithKeywordsFallback(msg.text, detected_language);
             source = 'keyword';
         }
@@ -239,15 +240,16 @@ export class CommunityAgent {
             result.confidence
         );
 
+        // Step 4: 多语言分类结果组装
         return {
             category: result.category,
             severity,
             autoAllowed,
             detected_language,
             confidence: result.confidence,
-            reasoning: result.reasoning,
+            reasoning: `[${detected_language}] ${result.reasoning}`,
             escalationReason: autoAllowed ? undefined : this.getEscalationReason(result.category),
-            source  // 新增: 记录分类来源
+            source  // 记录分类来源
         };
     }
 
