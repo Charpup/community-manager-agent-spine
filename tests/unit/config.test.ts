@@ -102,6 +102,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).not.toThrow();
@@ -118,6 +121,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).not.toThrow();
@@ -134,6 +140,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'mock_channel',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).not.toThrow();
@@ -150,6 +159,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: true,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).not.toThrow();
@@ -168,6 +180,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).not.toThrow();
@@ -186,6 +201,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -203,6 +221,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -220,6 +241,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -237,6 +261,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -254,6 +281,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -271,6 +301,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -288,6 +321,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -305,6 +341,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -322,6 +361,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'invalid_channel' as any,
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -339,6 +381,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             expect(() => validateConfig(config)).toThrow(ConfigValidationError);
@@ -376,6 +421,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             validateConfig(config);
@@ -394,6 +442,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'sdk_backend',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             validateConfig(config);
@@ -412,6 +463,9 @@ describe('Config Module', () => {
                 sqlitePath: './data/cm_agent.sqlite',
                 isTestMode: false,
                 channel: 'facebook',
+                cruiseIntervalMs: 300000,
+                cruiseReportLanguage: 'zh-CN',
+                cruiseBatchSize: 100,
             };
 
             validateConfig(config);

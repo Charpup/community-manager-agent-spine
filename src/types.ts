@@ -1,5 +1,11 @@
 export type Channel = "facebook" | "mock_channel" | "sdk_backend";
 
+// 新增: 语言类型
+export type Language = 'zh-CN' | 'zh-TW' | 'en' | 'ja' | 'ko' | 'es' | 'unknown';
+
+// 新增: 分类类型 (限定6大分类)
+export type Category = 'payment' | 'refund' | 'bug' | 'ban_appeal' | 'abuse' | 'general';
+
 export type MessageEvent = {
     channel: Channel;
     threadId: string;
@@ -11,8 +17,9 @@ export type MessageEvent = {
     raw?: unknown;
 };
 
+// 扩展: NormalizedMessage 确保 language 字段使用 Language 类型
 export type NormalizedMessage = MessageEvent & {
-    language?: string;
+    language?: Language;
     entities: {
         orderId?: string;
         email?: string;
@@ -22,19 +29,40 @@ export type NormalizedMessage = MessageEvent & {
     };
 };
 
+// 扩展: TriageDecision 新增字段
 export type TriageDecision = {
-    category:
-    | "payment"
-    | "login"
-    | "bug"
-    | "ban_appeal"
-    | "refund"
-    | "abuse"
-    | "general"
-    | "unknown";
+    category: Category;
     severity: "low" | "medium" | "high" | "critical";
     autoAllowed: boolean;
     escalationReason?: string;
+    detected_language?: Language;  // 新增: 检测到的语言
+    confidence?: number;           // 新增: 置信度 0-1
+};
+
+// 新增: CruiseLog 类型
+export type CruiseLog = {
+    id: number;
+    timestamp: number;
+    report_md: string;
+    stats_json: string;  // 存储 { total, categories: {}, languages: {} }
+    duration_ms: number;
+};
+
+// 新增: 巡航统计类型
+export type CruiseStats = {
+    total: number;
+    categories: Record<Category, number>;
+    languages: Record<Language, number>;
+    highPriority: number;
+};
+
+// 新增: Ticket 类型 (用于巡航报告)
+export type Ticket = {
+    id: string;
+    text: string;
+    detected_language?: Language;
+    category: Category;
+    severity: 'low' | 'medium' | 'high' | 'critical';
 };
 
 export type Evidence = { title: string; snippet: string; sourceId: string };
@@ -68,6 +96,9 @@ export type CaseRecord = {
     lastAgentActionAtMs?: number;
     assignedTo?: "agent" | "human";
     notes?: string[];
+    // v0.5 新增: 语言检测和置信度
+    detected_language?: Language;
+    confidence?: number;
 };
 
 // 操作审计日志类型

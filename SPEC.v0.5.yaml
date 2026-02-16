@@ -1,0 +1,439 @@
+# SPEC.yaml — v0.5 Multilingual Cruise
+# TDD+SDD Specification for community-manager-agent-spine v0.5
+
+spec_version: "1.1.0"
+skill_name: community-manager-agent-spine
+version: "0.5.0"
+description: |
+  Multilingual Ticket Classification and Cruise Reporting System.
+  Supports 6 languages: zh-CN, zh-TW, en, ja, ko, es.
+  Generates automated cruise reports with category and language statistics.
+
+---
+
+# SDD Pyramid (Behavior Layer - AI Agent)
+
+end_to_end_tests:
+  - name: multilingual_cruise_full_workflow
+    description: Complete cruise workflow with multilingual tickets
+    steps:
+      - Setup mock SDK backend with 20 tickets (5 zh-CN, 5 zh-TW, 5 en, 5 ja)
+      - Run cruise once with --cruise-once flag
+      - Verify all tickets classified correctly
+      - Verify cruise_logs table populated
+      - Verify report contains language distribution
+    expected:
+      - Report generated with correct counts per language
+      - All tickets classified into 6 categories
+      - Database contains cruise log entry
+      - Duration logged correctly
+
+  - name: language_detection_accuracy
+    description: Language detection for mixed content tickets
+    steps:
+      - Create tickets with mixed language content
+      - Run classification
+      - Check detected_language field
+    expected:
+      - zh-CN content detected correctly
+      - ja content detected correctly
+      - en content detected correctly
+
+  - name: cruise_scheduler_interval
+    description: Automatic cruise execution at intervals
+    steps:
+      - Set CRUISE_INTERVAL_MS=5000 (5 seconds for test)
+      - Start agent
+      - Wait for 3 intervals
+    expected:
+      - 3 cruise logs created
+      - Each cruise processes new tickets
+
+module_collaboration_tests:
+  - name: i18n_to_classifier_integration
+    description: i18n keywords feed into agent classifier
+    components:
+      - i18n/keywords.ts
+      - i18n/detect.ts
+      - agent.ts (triage)
+    scenarios:
+      - name: chinese_payment_detected
+        given:
+          - Ticket content: "充值了但没到账"
+        when: triage() called
+        then:
+          - category === 'payment'
+          - detected_language === 'zh-CN'
+          - confidence > 0.8
+
+      - name: english_refund_detected
+        given:
+          - Ticket content: "I want a refund for my purchase"
+        when: triage() called
+        then:
+          - category === 'refund'
+          - detected_language === 'en'
+          - confidence > 0.8
+
+      - name: japanese_bug_detected
+        given:
+          - Ticket content: "ゲームがクラッシュする"
+        when: triage() called
+        then:
+          - category === 'bug'
+          - detected_language === 'ja'
+          - confidence > 0.7
+
+  - name: classifier_to_report_integration
+    description: Classification results feed into cruise report
+    components:
+      - agent.ts (triage)
+      - reports/cruise-report.ts
+      - repo/sqlite.ts
+    scenarios:
+      - name: report_aggregates_categories
+        given:
+          - 10 tickets with mixed categories
+        when: generateCruiseReport() called
+        then:
+          - Report contains category counts
+          - Report contains language distribution
+          - Stats JSON is valid
+
+  - name: scheduler_to_cruise_integration
+    description: Scheduler triggers cruise execution
+    components:
+      - runtime/cruise-scheduler.ts
+      - reports/cruise-report.ts
+      - repo/sqlite.ts
+    scenarios:
+      - name: interval_triggers_cruise
+        given:
+          - CRUISE_INTERVAL_MS set
+        when: scheduler starts
+        then:
+          - Cruise executes at intervals
+          - Results stored in cruise_logs
+
+tool_function_contracts:
+  - tool: sessions_spawn
+    contract:
+      preconditions:
+        - Task description provided with label
+        - Label format: "v05-sub{N}-{module}"
+      postconditions:
+        - Subagent spawned successfully
+        - Returns childSessionKey and runId
+
+---
+
+# TDD Pyramid (Implementation Layer)
+
+interface_contract_tests:
+  - interface: LanguageDetector
+    implementations:
+      - i18n/detect.ts (detectLanguage)
+    tests:
+      - name: returns_language_code
+        assert: result matches /^[a-z]{2}(-[A-Z]{2})?$/
+      
+      - name: handles_empty_string
+        input: ""
+        expect: returns 'unknown' or throws
+      
+      - name: handles_mixed_content
+        input: "充值 payment しました"
+        expect: returns primary language
+
+  - interface: CategoryClassifier
+    implementations:
+      - agent.ts (triage)
+    tests:
+      - name: returns_category_and_confidence
+        assert: |
+          result.category in ['payment', 'refund', 'bug', 'ban_appeal', 'abuse', 'general']
+          typeof result.confidence === 'number'
+          result.confidence between 0 and 1
+      
+      - name: returns_detected_language
+        assert: result.detected_language is valid language code
+
+  - interface: CruiseReporter
+    implementations:
+      - reports/cruise-report.ts
+    tests:
+      - name: generates_markdown_report
+        assert: result startsWith('# 客诉巡航报告')
+      
+      - name: includes_all_languages
+        assert: report contains language distribution table
+      
+      - name: includes_category_stats
+        assert: report contains category statistics
+
+module_integration_tests:
+  - name: keywords_to_classifier_flow
+    description: Keywords module integrates with classifier
+    test: |
+      const keywords = getKeywordsForCategory('payment', 'zh-CN');
+      const result = triage('充值失败', keywords);
+      expect(result.category).toBe('payment');
+
+  - name: detect_to_classifier_flow
+    description: Language detection feeds classifier
+    test: |
+      const lang = detectLanguage('payment failed');
+      const keywords = getKeywordsForCategory('payment', lang);
+      const result = triage('payment failed', keywords);
+      expect(result.detected_language).toBe('en');
+
+  - name: classifier_to_database_flow
+    description: Classification results stored in DB
+    test: |
+      const result = triage('充值问题');
+      await saveTicket({ ...ticket, ...result });
+      const saved = await getTicket(ticket.id);
+      expect(saved.category).toBe('payment');
+
+function_level_unit_tests:
+  # i18n/detect.ts Tests
+  - target: detectLanguage
+    tests:
+      - name: detects_simplified_chinese
+        input: "充值没到账"
+        expect: "zh-CN"
+      
+      - name: detects_traditional_chinese
+        input: "充值沒到帳"
+        expect: "zh-TW"
+      
+      - name: detects_english
+        input: "payment not working"
+        expect: "en"
+      
+      - name: detects_japanese
+        input: "課金できない"
+        expect: "ja"
+      
+      - name: detects_korean
+        input: "결제가 안돼요"
+        expect: "ko"
+      
+      - name: detects_spanish
+        input: "no puedo pagar"
+        expect: "es"
+      
+      - name: returns_unknown_for_empty
+        input: ""
+        expect: "unknown"
+
+  # i18n/keywords.ts Tests
+  - target: getKeywordsForCategory
+    tests:
+      - name: returns_zh_cn_payment_keywords
+        params: ['payment', 'zh-CN']
+        expect: contains '充值', '支付', '付款'
+      
+      - name: returns_en_payment_keywords
+        params: ['payment', 'en']
+        expect: contains 'payment', 'purchase'
+      
+      - name: returns_ja_refund_keywords
+        params: ['refund', 'ja']
+        expect: contains '返金', '払い戻し'
+      
+      - name: throws_for_invalid_category
+        params: ['invalid', 'en']
+        expect: throws Error
+      
+      - name: throws_for_invalid_language
+        params: ['payment', 'invalid']
+        expect: throws Error
+
+  - target: classifyWithKeywords
+    tests:
+      - name: matches_payment_keyword_zh
+        input: "充值了但没到账", category: 'payment', lang: 'zh-CN'
+        expect: confidence > 0.8
+      
+      - name: matches_bug_keyword_en
+        input: "game keeps crashing", category: 'bug', lang: 'en'
+        expect: confidence > 0.8
+      
+      - name: no_match_returns_low_confidence
+        input: "random text about weather", category: 'payment', lang: 'en'
+        expect: confidence < 0.3
+      
+      - name: partial_match_medium_confidence
+        input: "pay something", category: 'payment', lang: 'en'
+        expect: confidence between 0.3 and 0.8
+
+  # reports/cruise-report.ts Tests
+  - target: generateCruiseReport
+    tests:
+      - name: generates_report_with_stats
+        input: tickets = [
+          { category: 'payment', detected_language: 'zh-CN' },
+          { category: 'bug', detected_language: 'en' }
+        ]
+        expect: |
+          report contains '客诉巡航报告'
+          stats.total === 2
+          stats.categories.payment === 1
+          stats.languages['zh-CN'] === 1
+      
+      - name: handles_empty_ticket_list
+        input: tickets = []
+        expect: |
+          report generated
+          stats.total === 0
+      
+      - name: formats_duration_correctly
+        input: durationMs = 3661000
+        expect: report contains '1h 1m 1s'
+
+  - target: formatLanguageDistribution
+    tests:
+      - name: creates_table_with_percentages
+        input: { 'zh-CN': 50, 'en': 30, 'ja': 20 }
+        expect: table contains percentages summing to 100%
+
+  - target: formatCategoryStats
+    tests:
+      - name: creates_table_with_icons
+        input: { payment: 10, bug: 5 }
+        expect: table contains icons (💰, 🐛)
+
+  # runtime/cruise-scheduler.ts Tests
+  - target: CruiseScheduler.start
+    tests:
+      - name: schedules_next_run
+        config: { intervalMs: 5000 }
+        expect: setTimeout called with 5000
+      
+      - name: executes_cruise_on_interval
+        setup: mock generateCruiseReport
+        expect: generateCruiseReport called each interval
+
+  - target: CruiseScheduler.stop
+    tests:
+      - name: clears_scheduled_run
+        setup: scheduler.start()
+        action: scheduler.stop()
+        expect: clearTimeout called, no more executions
+
+  # agent.ts (triage) Tests
+  - target: triage
+    tests:
+      - name: classifies_with_detected_language
+        input: "充值问题"
+        expect: |
+          result.category === 'payment'
+          result.detected_language === 'zh-CN'
+          result.confidence > 0.8
+      
+      - name: uses_fallback_for_unknown_language
+        input: "unrecognizable content"
+        expect: |
+          result.category === 'general' OR confidence < 0.5
+          result.detected_language === 'unknown'
+      
+      - name: calculates_confidence_based_on_matches
+        input: "充值充值充值"  # multiple keywords
+        expect: confidence > single keyword match
+
+---
+
+# Implementation Requirements
+
+files_to_create:
+  - path: src/i18n/keywords.ts
+    description: Multi-language keyword mappings for 6 languages
+    
+  - path: src/i18n/detect.ts
+    description: Language detection using cld3 or heuristics
+    
+  - path: src/i18n/reports.ts
+    description: Multi-language report templates
+    
+  - path: src/reports/cruise-report.ts
+    description: Cruise report generator with language/category stats
+    
+  - path: src/reports/formatters.ts
+    description: Formatting utilities for durations, percentages
+    
+  - path: src/reports/templates.ts
+    description: Markdown report templates
+    
+  - path: src/runtime/cruise-scheduler.ts
+    description: Interval-based cruise scheduling
+    
+  - path: tests/unit/i18n/detect.test.ts
+    description: Language detection unit tests
+    
+  - path: tests/unit/i18n/keywords.test.ts
+    description: Keywords module unit tests
+    
+  - path: tests/unit/reports/cruise-report.test.ts
+    description: Report generator unit tests
+    
+  - path: tests/integration/multilingual-classification.test.ts
+    description: Multi-language classification integration tests
+    
+  - path: tests/acceptance/cruise-workflow.test.ts
+    description: End-to-end cruise workflow acceptance tests
+
+files_to_modify:
+  - path: src/agent.ts
+    changes:
+      - Add language detection to triage()
+      - Integrate i18n keywords
+      - Add detected_language and confidence to return type
+      
+  - path: src/config.ts
+    changes:
+      - Add CRUISE_INTERVAL_MS
+      - Add CRUISE_REPORT_LANGUAGE
+      - Add CRUISE_BATCH_SIZE
+      
+  - path: src/repo/migrations.sql
+    changes:
+      - Add CREATE TABLE cruise_logs
+      - Add ALTER TABLE tickets (detected_language, category_confidence)
+      
+  - path: src/types.ts
+    changes:
+      - Add Category type
+      - Add Language type
+      - Update Ticket type with detected_language
+      - Add CruiseLog type
+
+dependencies_to_add:
+  - name: cld3
+    type: production
+    description: Language detection library (Google Compact Language Detector)
+    
+  - name: @types/cld3
+    type: devDependency
+    optional: true
+
+scripts_to_add:
+  test:i18n: jest --testPathPattern=i18n
+  test:reports: jest --testPathPattern=reports
+  test:multilingual: jest --testPathPattern=multilingual
+
+acceptance_criteria:
+  - Unit test coverage ≥ 70% for new modules
+  - All integration tests pass for 4 P0 languages (zh-CN, zh-TW, en, ja)
+  - End-to-end cruise workflow completes successfully
+  - Language detection accuracy ≥ 90% for P0 languages
+  - Classification accuracy ≥ 85% for zh-CN/zh-TW/en, ≥ 75% for ja
+  - Report generation completes in < 1 second for 100 tickets
+  - Scheduler executes at configured intervals (±10% tolerance)
+
+constraints:
+  - "Language detection must work offline (no external API calls)"
+  - "Keyword matching must be case-insensitive"
+  - "Report must be valid Markdown"
+  - "All time displays must be in CST (Asia/Shanghai)"
+  - "Cruise must not block main event loop"

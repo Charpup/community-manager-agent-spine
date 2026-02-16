@@ -25,6 +25,11 @@ export interface Config {
 
     // Channel selection
     channel: "facebook" | "sdk_backend" | "mock_channel";
+
+    // v0.5 新增: 巡航配置
+    cruiseIntervalMs: number;
+    cruiseReportLanguage: string;
+    cruiseBatchSize: number;
 }
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
@@ -58,6 +63,11 @@ export function loadConfig(): Config {
         sqlitePath: getEnvOrDefault("SQLITE_PATH", "./data/cm_agent.sqlite"),
         isTestMode,
         channel,
+        
+        // v0.5 新增
+        cruiseIntervalMs: parseInt(getEnvOrDefault("CRUISE_INTERVAL_MS", "300000"), 10), // 5分钟
+        cruiseReportLanguage: getEnvOrDefault("CRUISE_REPORT_LANGUAGE", "zh-CN"),
+        cruiseBatchSize: parseInt(getEnvOrDefault("CRUISE_BATCH_SIZE", "100"), 10),
     };
 }
 
@@ -104,6 +114,20 @@ export function validateConfig(config: Config): void {
     }
     if (isNaN(config.sdkBackendPollIntervalMs) || config.sdkBackendPollIntervalMs <= 0) {
         errors.push("SDK_BACKEND_POLL_INTERVAL_MS must be a positive number");
+    }
+
+    // v0.5 新增验证
+    if (isNaN(config.cruiseIntervalMs) || config.cruiseIntervalMs < 10000) {
+        errors.push("CRUISE_INTERVAL_MS must be at least 10000ms (10 seconds)");
+    }
+    
+    if (isNaN(config.cruiseBatchSize) || config.cruiseBatchSize <= 0) {
+        errors.push("CRUISE_BATCH_SIZE must be a positive number");
+    }
+    
+    const validReportLanguages = ['zh-CN', 'zh-TW', 'en', 'ja'];
+    if (!validReportLanguages.includes(config.cruiseReportLanguage)) {
+        errors.push(`CRUISE_REPORT_LANGUAGE must be one of: ${validReportLanguages.join(', ')}`);
     }
 
     // Throw if any errors found

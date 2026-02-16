@@ -42,3 +42,21 @@ CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
 CREATE INDEX IF NOT EXISTS idx_messages_case ON messages(case_id);
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp_ms);
 CREATE INDEX IF NOT EXISTS idx_actions_case ON actions(case_id);
+
+-- v0.5: 巡航报告表
+CREATE TABLE IF NOT EXISTS cruise_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp INTEGER NOT NULL,
+  report_md TEXT NOT NULL,
+  stats_json TEXT NOT NULL,  -- { total, categories: {}, languages: {} }
+  duration_ms INTEGER
+);
+
+-- v0.5: cases 表扩展字段
+-- 注意: SQLite 不支持直接 ADD COLUMN IF NOT EXISTS
+-- 需要检查列是否存在
+-- ALTER TABLE cases ADD COLUMN detected_language TEXT;
+-- ALTER TABLE cases ADD COLUMN category_confidence REAL;
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_cruise_logs_timestamp ON cruise_logs(timestamp);

@@ -9,7 +9,10 @@ import {
     KnowledgeBase,
     Notifier,
     CaseRecord,
+    Category,
 } from "./types";
+import { detectLanguage } from './i18n/detect';
+import { classifyWithKeywords } from './i18n/keywords';
 
 export class CommunityAgent {
     constructor(
@@ -48,9 +51,14 @@ export class CommunityAgent {
                 lastMessageAtMs: ev.timestampMs,
                 assignedTo: triage.autoAllowed ? "agent" : "human",
                 notes: [],
+                detected_language: triage.detected_language,
+                confidence: triage.confidence,
             };
         } else {
             caseRec.lastMessageAtMs = ev.timestampMs;
+            // Update detected language and confidence on new messages
+            caseRec.detected_language = triage.detected_language;
+            caseRec.confidence = triage.confidence;
             // If the user replies again, typically we're back in progress.
             if (caseRec.status === "WAITING_USER") {
                 const prevStatus = caseRec.status;
@@ -173,30 +181,78 @@ export class CommunityAgent {
     }
 
     private triage(msg: NormalizedMessage): TriageDecision {
-        // Hard gates
-        if (/(refund|退款)/i.test(msg.text)) {
-            return { category: "refund", severity: "high", autoAllowed: false, escalationReason: "refund requires human approval" };
-        }
-        if (/(ban|封号|suspend|冻结)/i.test(msg.text)) {
-            return { category: "ban_appeal", severity: "high", autoAllowed: false, escalationReason: "account enforcement sensitive" };
-        }
-        if (/(fuck|idiot|傻逼|辱骂)/i.test(msg.text)) {
-            return { category: "abuse", severity: "medium", autoAllowed: true };
+        // Step 1: Detect language
+        const detected_language = detectLanguage(msg.text);
+
+        // Step 2: Calculate confidence for each category
+        const categories: Category[] = ['payment', 'refund', 'bug', 'ban_appeal', 'abuse', 'general'];
+        let bestCategory: Category = 'general';
+        let bestConfidence = 0;
+
+        for (const category of categories) {
+            const confidence = classifyWithKeywords(msg.text, category, detected_language);
+            if (confidence > bestConfidence) {
+                bestConfidence = confidence;
+                bestCategory = category;
+            }
         }
 
-        // Heuristics - Payment detection (expanded keywords)
-        const paymentRe = /(pay|paid|payment|purchase|purchased|charge|charged|credit|card|充值|支付|扣款|购买)/i;
-        if (paymentRe.test(msg.text)) {
-            return { category: "payment", severity: "high", autoAllowed: true };
-        }
-        if (/(login|验证码|登录|无法进入|bind|绑定)/i.test(msg.text)) {
-            return { category: "login", severity: "medium", autoAllowed: true };
-        }
-        if (/(bug|crash|闪退|卡死|黑屏|报错)/i.test(msg.text)) {
-            return { category: "bug", severity: "high", autoAllowed: true };
-        }
+        // Step 3: Determine severity and auto-reply permissions
+        const { severity, autoAllowed } = this.getSeverityAndAutoAllow(bestCategory, bestConfidence);
 
-        return { category: "general", severity: "low", autoAllowed: true };
+        return {
+            category: bestCategory,
+            severity,
+            autoAllowed,
+            detected_language,
+            confidence: bestConfidence,
+            escalationReason: autoAllowed ? undefined : this.getEscalationReason(bestCategory),
+        };
+    }
+
+    private getSeverityAndAutoAllow(category: Category, confidence: number): { severity: "low" | "medium" | "high" | "critical", autoAllowed: boolean } {
+        // Confidence threshold: must be >= threshold to auto-reply
+        // Can be overridden via env var for testing
+        const CONFIDENCE_THRESHOLD = parseFloat(process.env.CLASSIFIER_CONFIDENCE_THRESHOLD || '0.7');
+        const hasEnoughConfidence = confidence >= CONFIDENCE_THRESHOLD;
+
+        switch (category) {
+            case 'refund':
+            case 'ban_appeal':
+                // These categories always require human handling
+                return { severity: 'high', autoAllowed: false };
+
+            case 'payment':
+            case 'bug':
+                // High severity, auto-allowed only if confidence is high enough
+                return { severity: 'high', autoAllowed: hasEnoughConfidence };
+
+            case 'abuse':
+                // Medium severity, auto-allowed if confidence is high enough
+                return { severity: 'medium', autoAllowed: hasEnoughConfidence };
+
+            case 'general':
+            default:
+                // Low severity, generally auto-allowed
+                return { severity: 'low', autoAllowed: hasEnoughConfidence };
+        }
+    }
+
+    private getEscalationReason(category: Category): string {
+        switch (category) {
+            case 'refund':
+                return 'refund requires human approval';
+            case 'ban_appeal':
+                return 'account enforcement sensitive';
+            case 'payment':
+            case 'bug':
+                return 'low confidence in classification';
+            case 'abuse':
+                return 'potential abuse report needs review';
+            case 'general':
+            default:
+                return 'policy gate';
+        }
     }
 
     private composeReply(msg: NormalizedMessage, triage: TriageDecision, evidence: EvidencePack): ReplyDraft {
