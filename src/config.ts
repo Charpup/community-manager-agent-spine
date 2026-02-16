@@ -61,24 +61,59 @@ export function loadConfig(): Config {
     };
 }
 
+export class ConfigValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ConfigValidationError";
+    }
+}
+
 export function validateConfig(config: Config): void {
+    const errors: string[] = [];
+
     if (!config.isTestMode) {
+        // Channel-specific validation
         if (config.channel === "facebook") {
             if (!config.fbPageId) {
-                throw new Error("FB_PAGE_ID is required when CHANNEL=facebook");
+                errors.push("FB_PAGE_ID is required when CHANNEL=facebook");
             }
             if (!config.fbPageAccessToken) {
-                throw new Error("FB_PAGE_ACCESS_TOKEN is required when CHANNEL=facebook");
+                errors.push("FB_PAGE_ACCESS_TOKEN is required when CHANNEL=facebook");
             }
         }
         
         if (config.channel === "sdk_backend") {
             if (!config.sdkBackendToken) {
-                throw new Error("SDK_BACKEND_TOKEN is required when CHANNEL=sdk_backend");
+                errors.push("SDK_BACKEND_TOKEN is required when CHANNEL=sdk_backend");
             }
+            if (!config.sdkBackendBaseUrl) {
+                errors.push("SDK_BACKEND_BASE_URL is required when CHANNEL=sdk_backend");
+            }
+        }
+
+        // Validate channel value
+        const validChannels = ["facebook", "sdk_backend", "mock_channel"];
+        if (!validChannels.includes(config.channel)) {
+            errors.push(`Invalid CHANNEL '${config.channel}'. Must be one of: ${validChannels.join(", ")}`);
         }
     }
 
+    // Numeric validations
+    if (isNaN(config.pollIntervalMs) || config.pollIntervalMs <= 0) {
+        errors.push("POLL_INTERVAL_MS must be a positive number");
+    }
+    if (isNaN(config.sdkBackendPollIntervalMs) || config.sdkBackendPollIntervalMs <= 0) {
+        errors.push("SDK_BACKEND_POLL_INTERVAL_MS must be a positive number");
+    }
+
+    // Throw if any errors found
+    if (errors.length > 0) {
+        throw new ConfigValidationError(
+            `Configuration validation failed:\n  - ${errors.join("\n  - ")}`
+        );
+    }
+
+    // Warnings for potentially problematic values
     if (config.pollIntervalMs < 5000) {
         console.warn("[Config] pollIntervalMs is very low, may hit rate limits");
     }
