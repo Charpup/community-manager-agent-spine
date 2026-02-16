@@ -1,7 +1,23 @@
 node_modules/
 dist/
 .env
+.env.*
 .DS_Store
 *.log
 data/
+
+# Sensitive configuration
+# Never commit API keys or secrets
+*.key
+*.secret
+secrets/
+
+# Coverage reports (optional, can be regenerated)
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
