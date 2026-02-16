@@ -5,8 +5,12 @@
   "main": "dist/agent.js",
   "scripts": {
     "start": "ts-node src/main.ts",
-    "dev": "ts-node-dev --respawn --transpile-only --poll src/main.ts",
+    "dev": "ts-node src/main.ts",
     "test": "NODE_ENV=test ts-node src/main.ts",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:acceptance": "jest --testPathPattern=acceptance",
+    "test:coverage": "jest --coverage",
     "build": "tsc"
   },
   "keywords": [
@@ -22,11 +26,15 @@
     "dotenv": "^16.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "ts-node": "^10.0.0",
-    "ts-node-dev": "^2.0.0",
-    "@types/node": "^20.0.0",
     "@types/better-sqlite3": "^7.6.0",
-    "date-fns": "^2.30.0"
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "date-fns": "^2.30.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.18"
   }
 }

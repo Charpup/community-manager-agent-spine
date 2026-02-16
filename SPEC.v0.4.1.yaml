@@ -1,0 +1,236 @@
+# SPEC.yaml — v0.4.1 SDK Backend Connector (TDD-SDD Enhanced)
+# TDD+SDD Specification for community-manager-agent-spine
+
+spec_version: "1.1.0"
+skill_name: community-manager-agent-spine
+version: "0.4.1"
+description: |
+  SDK Backend Connector for community manager agent - TDD-SDD Enhanced Edition.
+  Provides read-only access to SDK backend customer service tickets with full test coverage.
+
+---
+
+# SDD Pyramid (Behavior Layer)
+
+end_to_end_tests:
+  - name: mock_mode_integration
+    description: Full agent workflow with SDK backend mock
+    steps:
+      - Set NODE_ENV=test, CHANNEL=sdk_backend
+      - Start agent with SDKBackendMockConnector
+      - Verify mock tickets are processed
+      - Verify SQLite records created
+      - Verify category classification
+    expected:
+      - All 8 mock tickets processed
+      - Database contains ticket records with correct categories
+      - Process completes without errors
+      - Coverage report generated
+
+  - name: token_expiration_handling
+    description: Graceful handling of SDK backend token expiration
+    steps:
+      - Set SDK_BACKEND_TOKEN=invalid_token
+      - Start agent in production mode
+      - Wait for first poll
+    expected:
+      - Error message: "[SDK-BACKEND] Token expired..."
+      - Agent does not crash
+      - Clear suggestion to update .env file
+
+  - name: multi_language_mock_processing
+    description: Verify Chinese and English mock tickets are processed correctly
+    steps:
+      - Set CHANNEL=sdk_backend
+      - Run mock mode
+      - Check category classification for Chinese tickets
+      - Check category classification for English tickets
+    expected:
+      - Chinese "充值" → payment category
+      - English "payment" → payment category
+      - All languages handled correctly
+
+module_collaboration_tests:
+  - name: connector_config_integration
+    description: SDKBackendConnector integrates with Config
+    components:
+      - SDKBackendConnector
+      - Config (loadConfig, validateConfig)
+    scenarios:
+      - name: valid_config_creates_connector
+        given:
+          - Valid SDK_BACKEND_TOKEN
+          - Valid SDK_BACKEND_BASE_URL
+        when: Connector instantiated with config
+        then:
+          - Connector created successfully
+          - Token stored internally
+          - Base URL normalized
+      
+      - name: missing_token_throws_error
+        given:
+          - SDK_BACKEND_TOKEN is empty
+          - CHANNEL=sdk_backend
+        when: validateConfig called
+        then:
+          - Throws Error: "SDK_BACKEND_TOKEN is required when CHANNEL=sdk_backend"
+
+tool_function_contracts:
+  - tool: sessions_spawn
+    contract:
+      preconditions:
+        - Task description provided
+      postconditions:
+        - Subagent spawned successfully
+        - Returns childSessionKey and runId
+
+---
+
+# TDD Pyramid (Implementation Layer)
+
+interface_contract_tests:
+  - interface: InboxConnector
+    implementations:
+      - SDKBackendConnector
+      - SDKBackendMockConnector
+    tests:
+      - name: implements_channel_property
+        assert: instance.channel === 'sdk_backend'
+      
+      - name: implements_fetchNewMessages
+        assert: typeof instance.fetchNewMessages === 'function'
+        signature: (sinceMs: number) => Promise<MessageEvent[]>
+      
+      - name: implements_sendReply
+        assert: typeof instance.sendReply === 'function'
+        signature: (threadId: string, text: string) => Promise<void>
+
+module_integration_tests:
+  - name: config_to_connector_flow
+    description: Config values flow correctly to Connector
+    test: |
+      const config = loadConfig();
+      const connector = new SDKBackendConnector(
+        config.sdkBackendToken,
+        config.sdkBackendBaseUrl,
+        config.sdkBackendGameId,
+        config.sdkBackendPkgId
+      );
+      expect(connector).toBeDefined();
+
+function_level_unit_tests:
+  # SDKBackendConnector Tests
+  - target: SDKBackendConnector.fetchNewMessages
+    tests:
+      - name: returns_empty_array_when_no_tickets
+        mock: /service/ChatTopic/all returns { data: { list: [] } }
+        expect: result === []
+      
+      - name: handles_401_token_expired
+        mock: API returns 401 Unauthorized
+        expect: throws "[SDK-BACKEND] Token expired..."
+      
+      - name: builds_correct_url_with_params
+        params: { gameId: 123, pkgId: 456 }
+        expect: URL includes "gameid=123&pkgid=456"
+      
+      - name: never_includes_give_parameter
+        assert: URL does NOT include "give="
+
+  - target: SDKBackendConnector.sendReply
+    tests:
+      - name: throws_read_only_error
+        expect: throws "SDK Backend reply API not available — read-only mode"
+
+  # Config Tests
+  - target: loadConfig
+    tests:
+      - name: loads_sdk_backend_defaults
+        env: {}
+        expect: |
+          config.sdkBackendBaseUrl === 'https://xyhy-admin.xiaoyuehy.com'
+          config.sdkBackendPollIntervalMs === 30000
+      
+      - name: loads_custom_values_from_env
+        env: {
+          SDK_BACKEND_TOKEN: 'test-token',
+          SDK_BACKEND_BASE_URL: 'https://custom.com',
+          SDK_BACKEND_GAME_ID: '123'
+        }
+        expect: |
+          config.sdkBackendToken === 'test-token'
+          config.sdkBackendBaseUrl === 'https://custom.com'
+          config.sdkBackendGameId === 123
+
+  - target: validateConfig
+    tests:
+      - name: passes_with_valid_sdk_backend_config
+        config: { channel: 'sdk_backend', sdkBackendToken: 'valid' }
+        expect: no error
+      
+      - name: throws_when_sdk_backend_token_missing
+        config: { channel: 'sdk_backend', sdkBackendToken: '' }
+        expect: throws "SDK_BACKEND_TOKEN is required"
+
+  # SDKBackendMockConnector Tests
+  - target: SDKBackendMockConnector.fetchNewMessages
+    tests:
+      - name: generates_mock_messages_on_first_call
+        sinceMs: 0
+        expect: returns array with 15 messages
+      
+      - name: returns_empty_array_when_sinceMs_recent
+        sinceMs: Date.now()
+        expect: returns []
+      
+      - name: includes_chinese_and_english_samples
+        expect: messages contain both Chinese and English text
+
+---
+
+# Implementation Requirements
+
+files_to_create:
+  - path: tests/unit/sdk-backend.test.ts
+    description: Unit tests for SDKBackendConnector
+    
+  - path: tests/unit/config.test.ts
+    description: Unit tests for Config module
+    
+  - path: tests/unit/sdk-backend-mock.test.ts
+    description: Unit tests for SDKBackendMockConnector
+    
+  - path: tests/integration/connector-config.test.ts
+    description: Integration tests for Connector + Config
+    
+  - path: tests/acceptance/mock-mode.test.ts
+    description: End-to-end acceptance tests
+
+dependencies_to_add:
+  - name: jest
+    type: devDependency
+    
+  - name: @types/jest
+    type: devDependency
+    
+  - name: ts-jest
+    type: devDependency
+
+scripts_to_add:
+  test:unit: jest --testPathPattern=unit
+  test:integration: jest --testPathPattern=integration
+  test:acceptance: jest --testPathPattern=acceptance
+  test:coverage: jest --coverage
+
+acceptance_criteria:
+  - Unit test coverage ≥ 80% for sdk-backend.ts
+  - Unit test coverage ≥ 80% for config.ts
+  - All integration tests pass
+  - All acceptance tests pass
+  - npm run test:coverage shows ≥ 70% overall
+
+constraints:
+  - "NEVER send give=1 parameter to chatlist API"
+  - "Token must come from environment variables only"
+  - "All errors must be logged clearly"
+  - "Tests must run in isolation (no external dependencies)"
