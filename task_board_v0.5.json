@@ -129,7 +129,12 @@
     {
       "id": "v05-005",
       "title": "报告多语言模板 (i18n/reports.ts)",
-      "status": "pending",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "7语言报告模板",
+        "分类图标和本地化名称"
+      ],
       "priority": "medium",
       "category": "feature",
       "createdAt": "2026-02-16",
@@ -172,7 +177,13 @@
     {
       "id": "v05-007",
       "title": "定时巡航调度器 (cruise-scheduler.ts)",
-      "status": "in_progress",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "CruiseScheduler 类",
+        "start/stop/runCruise",
+        "8个测试通过"
+      ],
       "priority": "medium",
       "category": "feature",
       "createdAt": "2026-02-16",
@@ -215,7 +226,12 @@
     {
       "id": "v05-009",
       "title": "CLI --cruise-once参数",
-      "status": "in_progress",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "--cruise-once 参数支持",
+        "单次执行后退出"
+      ],
       "priority": "medium",
       "category": "feature",
       "createdAt": "2026-02-16",
@@ -234,7 +250,13 @@
     {
       "id": "v05-010",
       "title": "端到端集成测试",
-      "status": "pending",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "209个测试通过",
+        "整体覆盖率71%",
+        "12个测试套件全部通过"
+      ],
       "priority": "high",
       "category": "qa",
       "createdAt": "2026-02-16",
@@ -249,9 +271,9 @@
   ],
   "metrics": {
     "total": 11,
-    "completed": 7,
-    "inProgress": 2,
-    "pending": 2,
+    "completed": 11,
+    "inProgress": 0,
+    "pending": 0,
     "blocked": 0
   },
   "parallelBatches": [
