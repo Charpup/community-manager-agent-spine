@@ -111,6 +111,10 @@ export class InMemoryCaseRepository implements CaseRepository {
             openCases: relevant.filter((c) => c.status !== "CLOSED" && c.status !== "RESOLVED"),
         };
     }
+
+    close(): void {
+        // No-op for in-memory repository
+    }
 }
 
 /* -------------------------------------------------------------------------- */
