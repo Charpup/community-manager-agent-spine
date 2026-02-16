@@ -2,6 +2,8 @@ import { CommunityAgent } from '../agent';
 import { generateCruiseReport, calculateCruiseStats } from '../reports/cruise-report';
 import { CruiseRepository } from '../repo/cruise-repository';
 import { CaseRepository, Ticket, CaseRecord } from '../types';
+import { LLMClient } from '../llm/client';
+import { loadConfig } from '../config';
 
 export interface CruiseSchedulerOptions {
   agent: CommunityAgent;
@@ -10,13 +12,29 @@ export interface CruiseSchedulerOptions {
   intervalMs: number;
   reportLanguage: string;
   batchSize: number;
+  useLLM?: boolean;
+  llmClient?: LLMClient;
 }
 
 export class CruiseScheduler {
   private timer: NodeJS.Timeout | null = null;
   private isRunning = false;
+  private llmClient: LLMClient | null = null;
 
-  constructor(private options: CruiseSchedulerOptions) {}
+  constructor(private options: CruiseSchedulerOptions) {
+    // 如果配置了 LLM，初始化
+    const config = loadConfig();
+    if (config.llmApiKey && options.useLLM !== false) {
+      this.llmClient = new LLMClient({
+        apiKey: config.llmApiKey,
+        baseUrl: config.llmBaseUrl,
+        model: config.llmModel,
+        timeoutMs: config.llmTimeoutMs,
+        retryCount: config.llmRetryCount,
+        fallbackEnabled: config.llmFallbackEnabled
+      });
+    }
+  }
 
   /**
    * 启动定时巡航
@@ -80,8 +98,10 @@ export class CruiseScheduler {
       const stats = calculateCruiseStats(tickets);
 
       // 3. 生成报告
-      const report = generateCruiseReport(tickets, stats, {
+      const report = await generateCruiseReport(tickets, stats, {
         language: this.options.reportLanguage as any,
+        useLLM: !!this.llmClient,
+        llmClient: this.llmClient || undefined,
       });
 
       // 4. 存储报告
@@ -135,6 +155,8 @@ export async function runSingleCruise(options: {
   reportLanguage: string;
   batchSize: number;
   intervalMs?: number;
+  useLLM?: boolean;
+  llmClient?: LLMClient;
 }): Promise<{ report: string; stats: { total: number; highPriority: number } }> {
   const startTime = Date.now();
   console.log('[Cruise] Running single cruise at', new Date().toISOString());
@@ -167,8 +189,10 @@ export async function runSingleCruise(options: {
 
   // 生成报告
   const stats = calculateCruiseStats(tickets);
-  const report = generateCruiseReport(tickets, stats, {
+  const report = await generateCruiseReport(tickets, stats, {
     language: options.reportLanguage as any,
+    useLLM: options.useLLM,
+    llmClient: options.llmClient,
   });
 
   console.log(`[Cruise] Complete: ${stats.total} tickets, ${stats.highPriority} high priority (${Date.now() - startTime}ms)`);

@@ -10,17 +10,36 @@ import {
     Notifier,
     CaseRecord,
     Category,
+    Language,
 } from "./types";
 import { detectLanguage } from './i18n/detect';
 import { classifyWithKeywords } from './i18n/keywords';
+import { LLMClient } from './llm/client';
+import { LLMClassificationResult } from './llm/types';
+import { Config } from './config';
 
 export class CommunityAgent {
+    private llmClient: LLMClient | null = null;
+    
     constructor(
         private connector: InboxConnector,
         private cases: CaseRepository,
         private kb: KnowledgeBase,
-        private notifier: Notifier
-    ) { }
+        private notifier: Notifier,
+        private config?: Config
+    ) {
+        // 如果配置了 LLM，初始化客户端
+        if (config?.llmApiKey) {
+            this.llmClient = new LLMClient({
+                apiKey: config.llmApiKey,
+                baseUrl: config.llmBaseUrl,
+                model: config.llmModel,
+                timeoutMs: config.llmTimeoutMs,
+                retryCount: config.llmRetryCount,
+                fallbackEnabled: config.llmFallbackEnabled
+            });
+        }
+    }
 
     async runPoll(sinceMs: number): Promise<number> {
         const events = await this.connector.fetchNewMessages(sinceMs);
@@ -36,7 +55,7 @@ export class CommunityAgent {
     private async handleMessage(ev: MessageEvent) {
         console.log(`[Agent] Handling message from thread ${ev.threadId}`);
         const normalized = this.normalize(ev);
-        const triage = this.triage(normalized);
+        const triage = await this.triage(normalized);
 
         let caseRec = await this.cases.getCaseByThread(ev.channel, ev.threadId);
         if (!caseRec) {
@@ -180,34 +199,100 @@ export class CommunityAgent {
         };
     }
 
-    private triage(msg: NormalizedMessage): TriageDecision {
-        // Step 1: Detect language
+    private async triage(msg: NormalizedMessage): Promise<TriageDecision> {
+        // Step 1: 检测语言
         const detected_language = detectLanguage(msg.text);
 
-        // Step 2: Calculate confidence for each category
+        // Step 2: 尝试 LLM 分类
+        let result: LLMClassificationResult;
+        let source: 'llm' | 'keyword';
+
+        if (this.llmClient && this.config?.llmFallbackEnabled !== false) {
+            try {
+                // 尝试 LLM 分类
+                const llmResult = await this.llmClient.classifyTicket(
+                    msg.text,
+                    detected_language
+                );
+
+                result = llmResult;
+                source = 'llm';
+
+                console.log(`[Triage] LLM classification: ${result.category} (${result.confidence})`);
+
+            } catch (error: any) {
+                // LLM 失败，降级到关键词
+                console.warn(`[Triage] LLM failed, falling back to keywords: ${error.message}`);
+
+                result = this.classifyWithKeywordsFallback(msg.text, detected_language);
+                source = 'keyword';
+            }
+        } else {
+            // 未配置 LLM，直接使用关键词
+            result = this.classifyWithKeywordsFallback(msg.text, detected_language);
+            source = 'keyword';
+        }
+
+        // Step 3: 确定严重度和自动回复权限
+        const { severity, autoAllowed } = this.getSeverityAndAutoAllow(
+            result.category,
+            result.confidence
+        );
+
+        return {
+            category: result.category,
+            severity,
+            autoAllowed,
+            detected_language,
+            confidence: result.confidence,
+            reasoning: result.reasoning,
+            escalationReason: autoAllowed ? undefined : this.getEscalationReason(result.category),
+            source  // 新增: 记录分类来源
+        };
+    }
+
+    /**
+     * 关键词降级分类
+     */
+    private classifyWithKeywordsFallback(
+        content: string,
+        language: Language
+    ): LLMClassificationResult {
         const categories: Category[] = ['payment', 'refund', 'bug', 'ban_appeal', 'abuse', 'general'];
         let bestCategory: Category = 'general';
         let bestConfidence = 0;
 
         for (const category of categories) {
-            const confidence = classifyWithKeywords(msg.text, category, detected_language);
+            const confidence = classifyWithKeywords(content, category, language);
             if (confidence > bestConfidence) {
                 bestConfidence = confidence;
                 bestCategory = category;
             }
         }
 
-        // Step 3: Determine severity and auto-reply permissions
-        const { severity, autoAllowed } = this.getSeverityAndAutoAllow(bestCategory, bestConfidence);
-
+        // 构造 LLMClassificationResult 格式
         return {
             category: bestCategory,
-            severity,
-            autoAllowed,
-            detected_language,
             confidence: bestConfidence,
-            escalationReason: autoAllowed ? undefined : this.getEscalationReason(bestCategory),
+            reasoning: `Keyword matching (${language})`,
+            severity: this.inferSeverity(bestCategory),
+            source: 'keyword'
         };
+    }
+
+    private inferSeverity(category: Category): 'low' | 'medium' | 'high' | 'critical' {
+        switch (category) {
+            case 'refund':
+            case 'ban_appeal':
+                return 'high';
+            case 'payment':
+            case 'bug':
+                return 'high';
+            case 'abuse':
+                return 'medium';
+            default:
+                return 'low';
+        }
     }
 
     private getSeverityAndAutoAllow(category: Category, confidence: number): { severity: "low" | "medium" | "high" | "critical", autoAllowed: boolean } {

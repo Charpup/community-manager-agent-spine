@@ -11,7 +11,8 @@
     "test:integration": "jest --testPathPattern=integration",
     "test:acceptance": "jest --testPathPattern=acceptance",
     "test:coverage": "jest --coverage",
-    "build": "tsc"
+    "build": "tsc",
+    "compare": "ts-node src/scripts/compare-classifiers.ts"
   },
   "keywords": [
     "facebook",
@@ -23,7 +24,8 @@
   "license": "ISC",
   "dependencies": {
     "better-sqlite3": "^9.0.0",
-    "dotenv": "^16.0.0"
+    "dotenv": "^16.0.0",
+    "openai": "^6.22.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",

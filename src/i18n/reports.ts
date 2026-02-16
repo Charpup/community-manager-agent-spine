@@ -8,6 +8,7 @@ export interface ReportTitles {
     languageDistribution: string;
     categoryStats: string;
     highPriorityQueue: string;
+    trendAnalysis: string;
 }
 
 export function getReportTitles(language: Language): ReportTitles {
@@ -19,7 +20,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: '高优先级',
             languageDistribution: '语言分布',
             categoryStats: '分类统计',
-            highPriorityQueue: '高优先级队列'
+            highPriorityQueue: '高优先级队列',
+            trendAnalysis: '趋势分析'
         },
         'zh-TW': {
             title: '客訴巡航報告',
@@ -28,7 +30,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: '高優先級',
             languageDistribution: '語言分布',
             categoryStats: '分類統計',
-            highPriorityQueue: '高優先級佇列'
+            highPriorityQueue: '高優先級佇列',
+            trendAnalysis: '趨勢分析'
         },
         'en': {
             title: 'Ticket Cruise Report',
@@ -37,7 +40,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: 'High Priority',
             languageDistribution: 'Language Distribution',
             categoryStats: 'Category Statistics',
-            highPriorityQueue: 'High Priority Queue'
+            highPriorityQueue: 'High Priority Queue',
+            trendAnalysis: 'Trend Analysis'
         },
         'ja': {
             title: '問い合わせ巡航レポート',
@@ -46,7 +50,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: '高優先度',
             languageDistribution: '言語分布',
             categoryStats: 'カテゴリ統計',
-            highPriorityQueue: '高優先度キュー'
+            highPriorityQueue: '高優先度キュー',
+            trendAnalysis: 'トレンド分析'
         },
         'ko': {
             title: '문의 순회 보고서',
@@ -55,7 +60,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: '높은 우선순위',
             languageDistribution: '언어 분포',
             categoryStats: '카테고리 통계',
-            highPriorityQueue: '높은 우선순위 대기열'
+            highPriorityQueue: '높은 우선순위 대기열',
+            trendAnalysis: '추세 분석'
         },
         'es': {
             title: 'Informe de Crucero de Tickets',
@@ -64,7 +70,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: 'Alta Prioridad',
             languageDistribution: 'Distribución de Idiomas',
             categoryStats: 'Estadísticas de Categoría',
-            highPriorityQueue: 'Cola de Alta Prioridad'
+            highPriorityQueue: 'Cola de Alta Prioridad',
+            trendAnalysis: 'Análisis de Tendencias'
         },
         'unknown': {
             title: 'Ticket Cruise Report',
@@ -73,7 +80,8 @@ export function getReportTitles(language: Language): ReportTitles {
             highPriority: 'High Priority',
             languageDistribution: 'Language Distribution',
             categoryStats: 'Category Statistics',
-            highPriorityQueue: 'High Priority Queue'
+            highPriorityQueue: 'High Priority Queue',
+            trendAnalysis: 'Trend Analysis'
         }
     };
     

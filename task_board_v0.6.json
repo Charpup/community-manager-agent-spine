@@ -1,0 +1,216 @@
+{
+  "version": "2.1.0",
+  "project": "community-manager-agent-spine",
+  "version_target": "v0.6.0",
+  "lastUpdated": "2026-02-16",
+  "tasks": [
+    {
+      "id": "v06-001",
+      "title": "LLM Client 封装 (llm/client.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "OpenAI SDK 封装，支持分类和趋势分析",
+      "deliverables": [
+        "classifyTicket() - 客诉分类",
+        "analyzeTrends() - 趋势分析",
+        "自动重试和超时处理"
+      ],
+      "estimatedComplexity": 7,
+      "subagent": {
+        "label": "v06-sub1-llm-client",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-002",
+      "title": "重试机制 (llm/retry.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "指数退避重试机制",
+      "deliverables": [
+        "withRetry() 函数",
+        "最大3次重试",
+        "指数退避延迟"
+      ],
+      "estimatedComplexity": 4,
+      "subagent": {
+        "label": "v06-sub1-llm-client",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-003",
+      "title": "Prompt 模板 (llm/prompts.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "分类和趋势分析的 Prompt 模板",
+      "deliverables": [
+        "buildClassifyPrompt() - 分类 Prompt",
+        "buildTrendAnalysisPrompt() - 趋势分析 Prompt",
+        "多语言优化"
+      ],
+      "estimatedComplexity": 5,
+      "subagent": {
+        "label": "v06-sub2-prompts",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-004",
+      "title": "LLM 类型定义 (llm/types.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "medium",
+      "category": "infrastructure",
+      "createdAt": "2026-02-16",
+      "description": "LLM 相关 TypeScript 类型",
+      "deliverables": [
+        "LLMClassificationResult",
+        "ClassificationSource",
+        "LLMConfig"
+      ],
+      "estimatedComplexity": 3,
+      "subagent": {
+        "label": "v06-sub1-llm-client",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-005",
+      "title": "triage() 重构 (agent.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "LLM 优先 + 关键词降级",
+      "deliverables": [
+        "LLM 优先调用",
+        "故障降级机制",
+        "分类来源记录"
+      ],
+      "estimatedComplexity": 8,
+      "dependsOn": ["v06-001", "v06-002", "v06-003"],
+      "subagent": {
+        "label": "v06-sub3-classifier",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-006",
+      "title": "配置扩展 (config.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "medium",
+      "category": "infrastructure",
+      "createdAt": "2026-02-16",
+      "description": "LLM 相关配置项",
+      "deliverables": [
+        "LLM_API_KEY, LLM_BASE_URL, LLM_MODEL",
+        "LLM_TIMEOUT_MS, LLM_RETRY_COUNT",
+        "validateLLMConfig()"
+      ],
+      "estimatedComplexity": 4,
+      "dependsOn": ["v06-004"],
+      "subagent": {
+        "label": "v06-sub1-llm-client",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-007",
+      "title": "报告 LLM 增强 (reports/cruise-report.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "high",
+      "category": "feature",
+      "createdAt": "2026-02-16",
+      "description": "集成 LLM 趋势分析",
+      "deliverables": [
+        "LLM 趋势分析调用",
+        "自然语言洞察"
+      ],
+      "estimatedComplexity": 6,
+      "dependsOn": ["v06-001", "v06-003"],
+      "subagent": {
+        "label": "v06-sub4-reports",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-008",
+      "title": "对比测试脚本 (scripts/compare-classifiers.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",,
+      "priority": "medium",
+      "category": "qa",
+      "createdAt": "2026-02-16",
+      "description": "LLM vs 关键词准确率对比",
+      "deliverables": [
+        "对比测试脚本",
+        "准确率报告生成"
+      ],
+      "estimatedComplexity": 5,
+      "dependsOn": ["v06-005"],
+      "subagent": {
+        "label": "v06-sub5-compare",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v06-009",
+      "title": "端到端测试验证",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "priority": "high",
+      "category": "qa",
+      "createdAt": "2026-02-16",
+      "description": "完整测试套件验证",
+      "deliverables": [
+        "LLM 分类 E2E 测试",
+        "降级机制测试",
+        "准确率验证 (>90%)"
+      ],
+      "estimatedComplexity": 5,
+      "dependsOn": ["v06-005", "v06-007", "v06-008"]
+    }
+  ],
+  "metrics": {
+    "total": 9,
+    "completed": 9,
+    "inProgress": 0,
+    "pending": 0,
+    "blocked": 0
+  },
+  "parallelBatches": [
+    {
+      "batch": 1,
+      "name": "LLM 基础设施层",
+      "tasks": ["v06-001", "v06-002", "v06-003", "v06-004", "v06-006"],
+      "parallel": true
+    },
+    {
+      "batch": 2,
+      "name": "核心集成层",
+      "tasks": ["v06-005", "v06-007"],
+      "parallel": true,
+      "dependsOn": [1]
+    },
+    {
+      "batch": 3,
+      "name": "验证层",
+      "tasks": ["v06-008", "v06-009"],
+      "parallel": false,
+      "dependsOn": [2]
+    }
+  ]
+}

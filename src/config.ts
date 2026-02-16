@@ -30,6 +30,14 @@ export interface Config {
     cruiseIntervalMs: number;
     cruiseReportLanguage: string;
     cruiseBatchSize: number;
+
+    // LLM 配置 (v0.6)
+    llmApiKey: string;
+    llmBaseUrl: string;
+    llmModel: string;
+    llmTimeoutMs: number;
+    llmRetryCount: number;
+    llmFallbackEnabled: boolean;
 }
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
@@ -68,6 +76,14 @@ export function loadConfig(): Config {
         cruiseIntervalMs: parseInt(getEnvOrDefault("CRUISE_INTERVAL_MS", "300000"), 10), // 5分钟
         cruiseReportLanguage: getEnvOrDefault("CRUISE_REPORT_LANGUAGE", "zh-CN"),
         cruiseBatchSize: parseInt(getEnvOrDefault("CRUISE_BATCH_SIZE", "100"), 10),
+
+        // LLM 配置 (v0.6)
+        llmApiKey: getEnvOrDefault('LLM_API_KEY', ''),
+        llmBaseUrl: getEnvOrDefault('LLM_BASE_URL', 'https://api.apiyi.com/v1'),
+        llmModel: getEnvOrDefault('LLM_MODEL', 'gpt-4o-mini'),
+        llmTimeoutMs: parseInt(getEnvOrDefault('LLM_TIMEOUT_MS', '30000'), 10),
+        llmRetryCount: parseInt(getEnvOrDefault('LLM_RETRY_COUNT', '3'), 10),
+        llmFallbackEnabled: getEnvOrDefault('LLM_FALLBACK_ENABLED', 'true') === 'true',
     };
 }
 
@@ -128,6 +144,19 @@ export function validateConfig(config: Config): void {
     const validReportLanguages = ['zh-CN', 'zh-TW', 'en', 'ja'];
     if (!validReportLanguages.includes(config.cruiseReportLanguage)) {
         errors.push(`CRUISE_REPORT_LANGUAGE must be one of: ${validReportLanguages.join(', ')}`);
+    }
+
+    // LLM 配置验证 (仅在配置了 API key 时验证)
+    if (config.llmApiKey) {
+        if (!config.llmBaseUrl) {
+            errors.push('LLM_BASE_URL is required when LLM_API_KEY is set');
+        }
+        if (isNaN(config.llmTimeoutMs) || config.llmTimeoutMs < 5000) {
+            errors.push('LLM_TIMEOUT_MS must be at least 5000ms');
+        }
+        if (isNaN(config.llmRetryCount) || config.llmRetryCount < 0) {
+            errors.push('LLM_RETRY_COUNT must be a non-negative number');
+        }
     }
 
     // Throw if any errors found
