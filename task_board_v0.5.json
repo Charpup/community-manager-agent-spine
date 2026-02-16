@@ -1,0 +1,293 @@
+{
+  "version": "2.1.0",
+  "project": "community-manager-agent-spine",
+  "version_target": "v0.5.0",
+  "lastUpdated": "2026-02-16",
+  "tasks": [
+    {
+      "id": "v05-000",
+      "title": "类型定义更新 (types.ts)",
+      "status": "completed",
+      "priority": "high",
+      "category": "infrastructure",
+      "createdAt": "2026-02-16",
+      "description": "扩展TriageDecision，新增CruiseLog类型，所有模块依赖的基础",
+      "deliverables": [
+        "src/types.ts - 更新类型定义",
+        "Category/Language类型别名"
+      ],
+      "estimatedComplexity": 3,
+      "subagent": {
+        "label": "v05-sub0-types",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-001",
+      "title": "多语言关键词体系 (i18n/keywords.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "6语言 × 6分类 关键词映射",
+        "getKeywordsForCategory()",
+        "classifyWithKeywords()",
+        "100% 测试覆盖"
+      ],
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "建立6语种关键词映射表，支持6大分类",
+      "deliverables": [
+        "src/i18n/keywords.ts - 完整映射表",
+        "tests/unit/i18n/keywords.test.ts - 单元测试"
+      ],
+      "estimatedComplexity": 6,
+      "dependsOn": ["v05-000"],
+      "subagent": {
+        "label": "v05-sub1-i18n",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-002",
+      "title": "语言检测模块 (i18n/detect.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "detectLanguage() - 6语言检测",
+        "准确率 >90% (P0语言)",
+        "100% 测试覆盖"
+      ],
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "实现离线语言检测，支持6语种，准确率>90%",
+      "deliverables": [
+        "src/i18n/detect.ts - 检测实现",
+        "tests/unit/i18n/detect.test.ts - 单元测试"
+      ],
+      "estimatedComplexity": 7,
+      "subagent": {
+        "label": "v05-sub1-i18n",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-003",
+      "title": "多语言分类器重构 (agent.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "triage() 多语言重构",
+        "置信度阈值可配置",
+        "7个验收测试通过",
+        "agent.ts 79% 覆盖"
+      ],
+      "priority": "high",
+      "category": "core",
+      "createdAt": "2026-02-16",
+      "description": "重构triage()支持多语言检测+关键词分类",
+      "deliverables": [
+        "src/agent.ts - 更新triage()",
+        "src/types.ts - 更新类型定义",
+        "tests/integration/multilingual-classification.test.ts"
+      ],
+      "estimatedComplexity": 8,
+      "dependsOn": ["v05-000", "v05-001", "v05-002"],
+      "subagent": {
+        "label": "v05-sub2-classifier",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-004",
+      "title": "巡航报告生成器 (reports/cruise-report.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "generateCruiseReport()",
+        "calculateCruiseStats()",
+        "7语言报告模板",
+        "29个测试通过"
+      ]
+      "priority": "high",
+      "category": "feature",
+      "createdAt": "2026-02-16",
+      "description": "生成Markdown格式多语言巡航报告",
+      "deliverables": [
+        "src/reports/cruise-report.ts - 核心生成器",
+        "src/reports/formatters.ts - 格式化工具",
+        "src/reports/templates.ts - 模板定义",
+        "tests/unit/reports/cruise-report.test.ts"
+      ],
+      "estimatedComplexity": 7,
+      "subagent": {
+        "label": "v05-sub3-reports",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-005",
+      "title": "报告多语言模板 (i18n/reports.ts)",
+      "status": "pending",
+      "priority": "medium",
+      "category": "feature",
+      "createdAt": "2026-02-16",
+      "description": "报告标题、表头、说明的多语言模板",
+      "deliverables": [
+        "src/i18n/reports.ts - 模板定义"
+      ],
+      "estimatedComplexity": 4,
+      "dependsOn": ["v05-004"],
+      "subagent": {
+        "label": "v05-sub3-reports",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-006",
+      "title": "数据库迁移 (cruise_logs表)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "src/repo/migrations.sql - cruise_logs表",
+        "src/config.ts - CRUISE_*配置",
+        ".env.example - 环境变量示例",
+        "tests/unit/config-cruise.test.ts - 17个测试通过"
+      ]
+      "priority": "high",
+      "category": "infrastructure",
+      "createdAt": "2026-02-16",
+      "description": "新增cruise_logs表，扩展tickets表",
+      "deliverables": [
+        "src/repo/migrations.sql - 迁移脚本更新",
+        "src/types.ts - CruiseLog类型"
+      ],
+      "estimatedComplexity": 4,
+      "subagent": {
+        "label": "v05-sub4-scheduler",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-007",
+      "title": "定时巡航调度器 (cruise-scheduler.ts)",
+      "status": "in_progress",
+      "priority": "medium",
+      "category": "feature",
+      "createdAt": "2026-02-16",
+      "description": "实现间隔执行的巡航任务调度",
+      "deliverables": [
+        "src/runtime/cruise-scheduler.ts - 调度器实现"
+      ],
+      "estimatedComplexity": 5,
+      "dependsOn": ["v05-004", "v05-006"],
+      "subagent": {
+        "label": "v05-sub4-scheduler",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-008",
+      "title": "配置扩展 (config.ts)",
+      "status": "completed",
+      "completedAt": "2026-02-16",
+      "delivered": [
+        "cruiseIntervalMs",
+        "cruiseReportLanguage", 
+        "cruiseBatchSize",
+        "验证规则"
+      ]
+      "priority": "medium",
+      "category": "infrastructure",
+      "createdAt": "2026-02-16",
+      "description": "新增CRUISE_*环境变量支持",
+      "deliverables": [
+        "src/config.ts - 配置扩展",
+        ".env.example - 更新示例"
+      ],
+      "estimatedComplexity": 3,
+      "subagent": {
+        "label": "v05-sub4-scheduler",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-009",
+      "title": "CLI --cruise-once参数",
+      "status": "in_progress",
+      "priority": "medium",
+      "category": "feature",
+      "createdAt": "2026-02-16",
+      "description": "支持命令行单次巡航执行",
+      "deliverables": [
+        "src/main.ts - CLI参数处理更新",
+        "tests/acceptance/cruise-workflow.test.ts"
+      ],
+      "estimatedComplexity": 4,
+      "dependsOn": ["v05-007"],
+      "subagent": {
+        "label": "v05-sub4-scheduler",
+        "assignable": true
+      }
+    },
+    {
+      "id": "v05-010",
+      "title": "端到端集成测试",
+      "status": "pending",
+      "priority": "high",
+      "category": "qa",
+      "createdAt": "2026-02-16",
+      "description": "完整工作流程验证",
+      "deliverables": [
+        "tests/acceptance/cruise-workflow.test.ts - E2E测试",
+        "覆盖率>70%验证"
+      ],
+      "estimatedComplexity": 5,
+      "dependsOn": ["v05-003", "v05-007", "v05-009"]
+    }
+  ],
+  "metrics": {
+    "total": 11,
+    "completed": 7,
+    "inProgress": 2,
+    "pending": 2,
+    "blocked": 0
+  },
+  "parallelBatches": [
+    {
+      "batch": 0,
+      "name": "基础定义层",
+      "tasks": ["v05-000"],
+      "parallel": false
+    },
+    {
+      "batch": 1,
+      "name": "基础设施层",
+      "tasks": ["v05-001", "v05-002", "v05-006", "v05-008"],
+      "parallel": true,
+      "dependsOn": [0]
+    },
+    {
+      "batch": 2,
+      "name": "核心功能层",
+      "tasks": ["v05-003", "v05-004"],
+      "parallel": true,
+      "dependsOn": [1]
+    },
+    {
+      "batch": 3,
+      "name": "集成层",
+      "tasks": ["v05-005", "v05-007", "v05-009"],
+      "parallel": true,
+      "dependsOn": [2]
+    },
+    {
+      "batch": 4,
+      "name": "验证层",
+      "tasks": ["v05-010"],
+      "parallel": false,
+      "dependsOn": [3]
+    }
+  ]
+}

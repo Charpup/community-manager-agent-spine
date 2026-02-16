@@ -4,12 +4,14 @@
  * 支持多种运行模式：
  * - NODE_ENV=test: 使用 Mock 组件进行测试
  * - CHANNEL=sdk_backend: 使用 SDK 后台 Connector
+ * - --cruise-once: 执行单次巡航并退出
  * - 默认: 使用真实 Facebook + SQLite 组件
  */
 
 import { CommunityAgent } from "./agent";
 import { loadConfig, validateConfig } from "./config";
 import { startRescanLoop } from "./scheduler";
+import { runSingleCruise } from "./runtime/cruise-scheduler";
 
 // Mock 组件 (测试模式)
 import {
@@ -32,6 +34,13 @@ async function main() {
     const config = loadConfig();
     console.log(`[Config] Channel: ${config.channel}`);
 
+    // 检查 --cruise-once 参数
+    if (process.argv.includes('--cruise-once')) {
+        console.log('[Mode] Running single cruise and exiting\n');
+        await runCruiseOnceMode(config);
+        process.exit(0);
+    }
+
     if (config.isTestMode) {
         console.log("[Mode] Running in TEST mode with mocks\n");
         await runTestMode(config);
@@ -39,6 +48,31 @@ async function main() {
         console.log("[Mode] Running in PRODUCTION mode with real components\n");
         validateConfig(config);
         await runProductionMode(config);
+    }
+}
+
+/**
+ * 单次巡航模式 - 执行一次巡航并退出
+ */
+async function runCruiseOnceMode(config: ReturnType<typeof loadConfig>) {
+    const cases = config.isTestMode 
+        ? new InMemoryCaseRepository() 
+        : new SQLiteCaseRepository(config.sqlitePath);
+
+    try {
+        const { report } = await runSingleCruise({
+            caseRepo: cases,
+            reportLanguage: config.cruiseReportLanguage,
+            batchSize: config.cruiseBatchSize,
+            intervalMs: config.cruiseIntervalMs,
+        });
+
+        // 输出报告到 stdout
+        console.log('\n' + report);
+    } finally {
+        if (!config.isTestMode) {
+            cases.close();
+        }
     }
 }
 
