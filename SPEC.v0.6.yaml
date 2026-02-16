@@ -1,0 +1,352 @@
+# SPEC.yaml — v0.6 LLM Enhanced Classification
+# TDD+SDD Specification for community-manager-agent-spine v0.6
+
+spec_version: "1.1.0"
+skill_name: community-manager-agent-spine
+version: "0.6.0"
+description: |
+  LLM Enhanced Classification System using GPT-4o-mini.
+  Provides superior multilingual ticket classification with automatic fallback to keyword matching.
+
+---
+
+# SDD Pyramid (Behavior Layer - AI Agent)
+
+end_to_end_tests:
+  - name: llm_classification_workflow
+    description: Complete LLM classification with fallback verification
+    steps:
+      - Configure LLM_API_KEY and LLM_BASE_URL
+      - Start agent with SDKBackendMockConnector
+      - Process mock tickets with various languages
+      - Verify LLM classification results
+      - Simulate LLM failure and verify fallback
+    expected:
+      - All mock tickets classified correctly via LLM
+      - When LLM fails, fallback to keywords works seamlessly
+      - Classification confidence logged correctly
+
+  - name: llm_cruise_report_generation
+    description: LLM-powered cruise report with trend analysis
+    steps:
+      - Run cruise with 20+ mock tickets
+      - Generate report with LLM trend analysis
+      - Verify natural language insights present
+    expected:
+      - Report contains LLM-generated trend analysis
+      - Language-specific insights included
+      - Processing time < 5 seconds per analysis
+
+  - name: classifier_accuracy_comparison
+    description: Compare LLM vs keyword classification accuracy
+    steps:
+      - Run comparison script on 50 test tickets
+      - Calculate accuracy for both classifiers
+      - Generate comparison report
+    expected:
+      - LLM accuracy > keyword accuracy (target: +10% improvement)
+      - Detailed per-category accuracy breakdown
+
+module_collaboration_tests:
+  - name: llm_client_to_classifier_integration
+    description: LLM client integrates with agent classifier
+    components:
+      - llm/client.ts
+      - agent.ts (triage)
+      - llm/prompts.ts
+    scenarios:
+      - name: successful_llm_classification
+        given:
+          - Valid LLM_API_KEY configured
+          - Mock ticket with Chinese text
+        when: triage() called
+        then:
+          - LLM client called with proper prompt
+          - Category returned with confidence
+          - detected_language set correctly
+
+      - name: llm_failure_triggers_fallback
+        given:
+          - Invalid LLM_API_KEY (simulated failure)
+          - Mock ticket ready for classification
+        when: triage() called
+        then:
+          - LLM client fails gracefully
+          - Falls back to keyword classification
+          - Logs indicate fallback used
+
+  - name: classifier_to_report_integration
+    description: Classification results feed into LLM-enhanced reports
+    components:
+      - agent.ts (triage)
+      - reports/cruise-report.ts
+      - llm/prompts.ts
+    scenarios:
+      - name: report_uses_llm_trend_analysis
+        given:
+          - 20 tickets with LLM classifications
+        when: generateCruiseReport called
+        then:
+          - LLM trend analysis prompt constructed
+          - Natural language analysis included in report
+
+tool_function_contracts:
+  - tool: sessions_spawn
+    contract:
+      preconditions:
+        - Task description provided with label
+        - Label format: "v06-sub{N}-{module}"
+      postconditions:
+        - Subagent spawned successfully
+        - Returns childSessionKey and runId
+
+---
+
+# TDD Pyramid (Implementation Layer)
+
+interface_contract_tests:
+  - interface: LLMClient
+    implementations:
+      - llm/client.ts
+    tests:
+      - name: implements_classifyTicket
+        assert: typeof llm.classifyTicket === 'function'
+        signature: (content: string, language: Language) => Promise<LLMClassificationResult>
+      
+      - name: implements_analyzeTrends
+        assert: typeof llm.analyzeTrends === 'function'
+        signature: (stats: CruiseStats) => Promise<string>
+      
+      - name: handles_timeout_gracefully
+        mock: API takes > timeout
+        expect: throws LLMTimeoutError
+
+  - interface: LLMClassificationResult
+    tests:
+      - name: has_required_fields
+        assert: |
+          result.category in ['payment', 'refund', 'bug', 'ban_appeal', 'abuse', 'general']
+          typeof result.confidence === 'number' && result.confidence between 0 and 1
+          typeof result.reasoning === 'string'
+          result.severity in ['low', 'medium', 'high', 'critical']
+
+module_integration_tests:
+  - name: llm_to_fallback_flow
+    description: When LLM fails, system falls back to keywords
+    test: |
+      // Mock LLM failure
+      jest.spyOn(llmClient, 'classifyTicket').mockRejectedValue(new Error('API Error'));
+      
+      const result = await agent.triage({ text: '充值失败', ... });
+      
+      // Should still get classification from keywords
+      expect(result.category).toBe('payment');
+      expect(result.confidence).toBeLessThan(0.8); // Lower confidence indicates fallback
+
+  - name: prompt_to_llm_flow
+    description: Prompt templates feed correct data to LLM
+    test: |
+      const prompt = buildClassifyPrompt('充值失败', 'zh-CN');
+      expect(prompt).toContain('充值失败');
+      expect(prompt).toContain('zh-CN');
+      expect(prompt).toContain('payment');
+
+function_level_unit_tests:
+  # llm/client.ts Tests
+  - target: LLMClient.classifyTicket
+    tests:
+      - name: returns_classification_for_chinese
+        input: { content: '充值了但没到账', language: 'zh-CN' }
+        mock: API returns valid JSON
+        expect: |
+          result.category === 'payment'
+          result.confidence > 0.8
+      
+      - name: returns_classification_for_english
+        input: { content: 'I want a refund', language: 'en' }
+        expect: result.category === 'refund'
+      
+      - name: returns_classification_for_japanese
+        input: { content: '課金できない', language: 'ja' }
+        expect: result.category === 'payment'
+      
+      - name: retries_on_failure
+        mock: API fails twice, succeeds on third
+        expect: eventual success
+      
+      - name: throws_after_max_retries
+        mock: API always fails
+        expect: throws LLMClassificationError
+      
+      - name: respects_timeout
+        mock: API responds after 60 seconds
+        timeout: 30 seconds
+        expect: throws LLMTimeoutError
+
+  - target: LLMClient.analyzeTrends
+    tests:
+      - name: generates_analysis_in_chinese
+        input: stats = { total: 50, categories: { payment: 20, ... } }
+        expect: |
+          result is string
+          result contains '趋势'
+          result contains '分析'
+      
+      - name: handles_empty_stats
+        input: stats = { total: 0, ... }
+        expect: returns '无数据' message
+
+  # llm/prompts.ts Tests
+  - target: buildClassifyPrompt
+    tests:
+      - name: includes_all_categories
+        input: content = 'test', language = 'zh-CN'
+        expect: prompt contains all 6 category names
+      
+      - name: escapes_special_characters
+        input: content = '{"malicious": true}'
+        expect: prompt handles JSON safely
+      
+      - name: handles_long_content
+        input: content = 5000 character string
+        expect: prompt truncates or handles gracefully
+
+  - target: buildTrendAnalysisPrompt
+    tests:
+      - name: includes_all_stats
+        input: stats with all fields
+        expect: prompt contains total, categories, languages, highPriority
+      
+      - name: formats_percentages
+        expect: prompt shows category percentages
+
+  # llm/retry.ts Tests
+  - target: withRetry
+    tests:
+      - name: succeeds_on_first_try
+        mock: function succeeds
+        expect: returns result immediately
+      
+      - name: succeeds_on_third_retry
+        mock: function fails twice, succeeds on third
+        expect: returns result after 3 attempts
+      
+      - name: fails_after_max_retries
+        mock: function always fails
+        expect: throws last error
+
+  # agent.ts (triage) Tests
+  - target: triage.with_llm
+    tests:
+      - name: uses_llm_when_available
+        setup: LLM configured and working
+        input: { text: '充值失败' }
+        expect: |
+          llmClient.classifyTicket called
+          result.source === 'llm'
+      
+      - name: falls_back_to_keywords_on_llm_failure
+        setup: LLM configured but failing
+        input: { text: '充值失败' }
+        expect: |
+          llmClient.classifyTicket called and failed
+          classifyWithKeywords called
+          result.source === 'keyword'
+      
+      - name: skips_llm_when_not_configured
+        setup: LLM_API_KEY not set
+        input: { text: '充值失败' }
+        expect: |
+          llmClient.classifyTicket NOT called
+          classifyWithKeywords called directly
+
+  - target: triage.confidence_threshold
+    tests:
+      - name: high_confidence_allows_auto_reply
+        setup: LLM returns confidence 0.9
+        input: payment category
+        expect: autoAllowed === true
+      
+      - name: low_confidence_blocks_auto_reply
+        setup: LLM returns confidence 0.5
+        input: payment category
+        expect: autoAllowed === false
+
+---
+
+# Implementation Requirements
+
+files_to_create:
+  - path: src/llm/client.ts
+    description: LLM API client with retry and timeout
+    
+  - path: src/llm/prompts.ts
+    description: Prompt templates for classification and analysis
+    
+  - path: src/llm/retry.ts
+    description: Retry utility with exponential backoff
+    
+  - path: src/llm/types.ts
+    description: TypeScript types for LLM responses
+    
+  - path: src/scripts/compare-classifiers.ts
+    description: Comparison script for LLM vs keyword accuracy
+    
+  - path: tests/unit/llm/client.test.ts
+    description: Unit tests for LLM client
+    
+  - path: tests/unit/llm/prompts.test.ts
+    description: Unit tests for prompts
+    
+  - path: tests/integration/llm-classifier.test.ts
+    description: Integration tests for LLM classification
+    
+  - path: tests/integration/fallback.test.ts
+    description: Tests for fallback mechanism
+
+files_to_modify:
+  - path: src/agent.ts
+    changes:
+      - Update triage() to use LLM first
+      - Add fallback logic
+      - Log classification source (llm vs keyword)
+      
+  - path: src/config.ts
+    changes:
+      - Add LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+      - Add LLM_TIMEOUT_MS, LLM_RETRY_COUNT
+      - Add validateLLMConfig()
+      
+  - path: src/reports/cruise-report.ts
+    changes:
+      - Add LLM trend analysis call
+      - Integrate natural language insights
+      
+  - path: src/types.ts
+    changes:
+      - Add LLMClassificationResult type
+      - Add ClassificationSource type ('llm' | 'keyword')
+
+dependencies_to_add:
+  - name: openai
+    type: production
+    description: OpenAI SDK for API calls
+
+scripts_to_add:
+  test:llm: jest --testPathPattern=llm
+  compare: ts-node src/scripts/compare-classifiers.ts
+
+acceptance_criteria:
+  - Unit test coverage ≥ 80% for llm/* modules
+  - LLM classification works for all 6 languages
+  - Fallback mechanism tested and working
+  - LLM accuracy ≥ 90% on test dataset
+  - Keyword fallback accuracy maintained (≥ 85%)
+  - Cruise report generates in < 3 seconds with LLM analysis
+
+constraints:
+  - "NEVER expose API key in logs or error messages"
+  - "LLM calls must have timeout (default 30s)"
+  - "Must retry on transient failures (max 3 attempts)"
+  - "System must work without LLM (fallback to keywords)"
+  - "API costs must be logged for monitoring"

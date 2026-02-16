@@ -37,6 +37,8 @@ export type TriageDecision = {
     escalationReason?: string;
     detected_language?: Language;  // 新增: 检测到的语言
     confidence?: number;           // 新增: 置信度 0-1
+    reasoning?: string;            // 新增: LLM 分类理由
+    source?: 'llm' | 'keyword';    // 新增: 分类来源
 };
 
 // 新增: CruiseLog 类型

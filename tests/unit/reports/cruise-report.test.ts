@@ -104,50 +104,50 @@ describe('Cruise Report Generator', () => {
             highPriority: 2
         };
 
-        it('should generate report with correct title in zh-CN', () => {
+        it('should generate report with correct title in zh-CN', async () => {
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('# 客诉巡航报告');
             expect(report).toContain('执行摘要');
         });
 
-        it('should generate report with correct title in en', () => {
+        it('should generate report with correct title in en', async () => {
             const options: CruiseReportOptions = { language: 'en' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('# Ticket Cruise Report');
             expect(report).toContain('Executive Summary');
         });
 
-        it('should generate report with correct title in ja', () => {
+        it('should generate report with correct title in ja', async () => {
             const options: CruiseReportOptions = { language: 'ja' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('# 問い合わせ巡航レポート');
             expect(report).toContain('概要');
         });
 
-        it('should include executive summary with correct stats', () => {
+        it('should include executive summary with correct stats', async () => {
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('新增客诉: 4');
             expect(report).toContain('高优先级: 2');
         });
 
-        it('should include language distribution table', () => {
+        it('should include language distribution table', async () => {
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('## 语言分布');
             expect(report).toContain('| 简体中文 | 2 | 50.0% |');
             expect(report).toContain('| 英文 | 1 | 25.0% |');
         });
 
-        it('should include category statistics table', () => {
+        it('should include category statistics table', async () => {
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('## 分类统计');
             expect(report).toContain('💰 充值/支付');
@@ -156,16 +156,16 @@ describe('Cruise Report Generator', () => {
             expect(report).toContain('🔒 封号申诉');
         });
 
-        it('should include high priority queue section', () => {
+        it('should include high priority queue section', async () => {
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('## 高优先级队列');
             expect(report).toContain('| T001 | zh-CN | payment |');
             expect(report).toContain('| T004 | ja | ban_appeal |');
         });
 
-        it('should limit high priority tickets to 10', () => {
+        it('should limit high priority tickets to 10', async () => {
             const manyHighPriorityTickets: Ticket[] = Array.from({ length: 15 }, (_, i) => ({
                 id: `T${String(i + 1).padStart(3, '0')}`,
                 text: `High priority ticket ${i + 1}`,
@@ -182,14 +182,14 @@ describe('Cruise Report Generator', () => {
             };
             
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(manyHighPriorityTickets, stats, options);
+            const report = await generateCruiseReport(manyHighPriorityTickets, stats, options);
             
             // Should only contain up to T010, not T011
             expect(report).toContain('T010');
             expect(report).not.toContain('T011');
         });
 
-        it('should not include high priority queue when no high priority tickets', () => {
+        it('should not include high priority queue when no high priority tickets', async () => {
             const lowPriorityTickets: Ticket[] = [
                 { id: 'T001', text: 'General question', category: 'general', severity: 'low' },
                 { id: 'T002', text: 'Another question', category: 'general', severity: 'medium' },
@@ -203,19 +203,19 @@ describe('Cruise Report Generator', () => {
             };
             
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(lowPriorityTickets, stats, options);
+            const report = await generateCruiseReport(lowPriorityTickets, stats, options);
             
             expect(report).not.toContain('## 高优先级队列');
         });
 
-        it('should include footer with version', () => {
+        it('should include footer with version', async () => {
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
-            expect(report).toContain('Generated by Community Manager Agent Spine v0.5.0');
+            expect(report).toContain('Generated by Community Manager Agent Spine v0.6.0');
         });
 
-        it('should handle tickets without language gracefully', () => {
+        it('should handle tickets without language gracefully', async () => {
             const ticketsWithoutLang: Ticket[] = [
                 { id: 'T001', text: 'Test', category: 'general', severity: 'high' },
             ];
@@ -228,14 +228,14 @@ describe('Cruise Report Generator', () => {
             };
             
             const options: CruiseReportOptions = { language: 'zh-CN' };
-            const report = generateCruiseReport(ticketsWithoutLang, stats, options);
+            const report = await generateCruiseReport(ticketsWithoutLang, stats, options);
             
             expect(report).toContain('| T001 | - | general |');
         });
 
-        it('should fallback to en when language is unknown', () => {
+        it('should fallback to en when language is unknown', async () => {
             const options: CruiseReportOptions = { language: 'unknown' as Language };
-            const report = generateCruiseReport(mockTickets, mockStats, options);
+            const report = await generateCruiseReport(mockTickets, mockStats, options);
             
             expect(report).toContain('# Ticket Cruise Report');
         });
