@@ -21,7 +21,7 @@
 
 ```yaml
 base_url: https://api.apiyi.com/v1
-api_key: sk-ArcTL2YXC3saNNWq92A303339a944b2fAd28477f9413Cb80
+api_key: ${LLM_API_KEY}  # 从环境变量读取，不要硬编码
 model: gpt-4o-mini  # 推荐: 性价比高，多语言能力强
 
 # Token 限制 (已确认):
