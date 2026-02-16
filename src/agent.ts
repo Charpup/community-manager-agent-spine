@@ -15,7 +15,6 @@ import {
 import { detectLanguage } from './i18n/detect';
 import { classifyWithKeywords } from './i18n/keywords';
 import { LLMClient } from './llm/client';
-import { LLMClassificationResult } from './llm/types';
 import { Config } from './config';
 
 export class CommunityAgent {
@@ -200,85 +199,59 @@ export class CommunityAgent {
     }
 
     private async triage(msg: NormalizedMessage): Promise<TriageDecision> {
-        // Step 1: 检测语言 (多语言支持)
         const detected_language = detectLanguage(msg.text);
-        console.log(`[Triage] Language detected: ${detected_language}`);
-
-        // Step 2: 尝试 LLM 分类 (传递语言信息以获得更好的多语言分类结果)
-        let result: LLMClassificationResult;
+        let result: any;
         let source: 'llm' | 'keyword';
 
-        if (this.llmClient && this.config?.llmFallbackEnabled !== false) {
+        // 尝试 LLM 分类
+        if (this.llmClient) {
             try {
-                // 尝试 LLM 分类，传入检测到的语言以优化多语言理解
-                const llmResult = await this.llmClient.classifyTicket(
-                    msg.text,
-                    detected_language
-                );
-
-                result = llmResult;
+                result = await this.llmClient.classifyTicket(msg.text, detected_language);
                 source = 'llm';
-
-                console.log(`[Triage] LLM classification [${detected_language}]: ${result.category} (${result.confidence})`);
-
-            } catch (error: any) {
-                // LLM 失败，降级到多语言关键词匹配
-                console.warn(`[Triage] LLM failed, falling back to keywords: ${error.message}`);
-
+            } catch (error) {
+                // 降级到关键词
                 result = this.classifyWithKeywordsFallback(msg.text, detected_language);
                 source = 'keyword';
             }
         } else {
-            // 未配置 LLM，使用多语言关键词分类
+            // 无 LLM，直接使用关键词
             result = this.classifyWithKeywordsFallback(msg.text, detected_language);
             source = 'keyword';
         }
 
-        // Step 3: 确定严重度和自动回复权限
-        const { severity, autoAllowed } = this.getSeverityAndAutoAllow(
-            result.category,
-            result.confidence
-        );
+        const autoAllowed = result.confidence >= 0.7;
 
-        // Step 4: 多语言分类结果组装
         return {
             category: result.category,
-            severity,
+            severity: result.severity,
             autoAllowed,
             detected_language,
             confidence: result.confidence,
-            reasoning: `[${detected_language}] ${result.reasoning}`,
-            escalationReason: autoAllowed ? undefined : this.getEscalationReason(result.category),
-            source  // 记录分类来源
+            reasoning: result.reasoning,
+            source,
+            escalationReason: autoAllowed ? undefined : this.getEscalationReason(result.category)
         };
     }
 
-    /**
-     * 关键词降级分类
-     */
-    private classifyWithKeywordsFallback(
-        content: string,
-        language: Language
-    ): LLMClassificationResult {
-        const categories: Category[] = ['payment', 'refund', 'bug', 'ban_appeal', 'abuse', 'general'];
-        let bestCategory: Category = 'general';
+    private classifyWithKeywordsFallback(content: string, language: Language) {
+        // 关键词降级逻辑
+        const categories = ['payment', 'refund', 'bug', 'ban_appeal', 'abuse', 'general'];
+        let bestCategory = 'general';
         let bestConfidence = 0;
 
         for (const category of categories) {
-            const confidence = classifyWithKeywords(content, category, language);
+            const confidence = classifyWithKeywords(content, category as Category, language);
             if (confidence > bestConfidence) {
                 bestConfidence = confidence;
                 bestCategory = category;
             }
         }
 
-        // 构造 LLMClassificationResult 格式
         return {
-            category: bestCategory,
+            category: bestCategory as Category,
             confidence: bestConfidence,
             reasoning: `Keyword matching (${language})`,
-            severity: this.inferSeverity(bestCategory),
-            source: 'keyword'
+            severity: this.inferSeverity(bestCategory as Category)
         };
     }
 
