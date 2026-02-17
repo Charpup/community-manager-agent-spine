@@ -22,11 +22,12 @@ import {
 } from "./mocks";
 
 // 真实组件 (生产模式)
-import { SQLiteCaseRepository } from "./repo/sqlite";
+import { SQLiteCaseRepository, setGlobalDatabase } from "./repo/sqlite";
 import { FacebookInboxConnector } from "./connectors/facebook";
 import { SDKBackendConnector } from "./connectors/sdk-backend";
 import { SDKBackendMockConnector } from "./connectors/sdk-backend-mock";
 import { startPollLoop } from "./runtime/poller";
+import { startAPIServer } from "./api/server";
 
 async function main() {
     console.log("=== Community Manager Agent ===\n");
@@ -154,6 +155,7 @@ async function runTestMode(config: ReturnType<typeof loadConfig>) {
 async function runProductionMode(config: ReturnType<typeof loadConfig>) {
     // 初始化组件
     const cases = new SQLiteCaseRepository(config.sqlitePath);
+    // Note: SQLiteCaseRepository constructor automatically registers the database for API access
     
     // 根据 channel 选择 connector
     let connector;
@@ -189,6 +191,10 @@ async function runProductionMode(config: ReturnType<typeof loadConfig>) {
         connector,
         intervalMs,
     });
+
+    // Start API server alongside poller
+    console.log('[Main] Starting API server...');
+    startAPIServer();
 
     console.log(`[Agent] Running (poll interval: ${intervalMs}ms)... Press Ctrl+C to stop\n`);
 

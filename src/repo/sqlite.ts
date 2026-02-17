@@ -13,6 +13,23 @@ import {
     Channel,
 } from "../types";
 
+// Re-export Database for API handlers
+export { Database };
+
+// 全局数据库实例（用于 API 访问）
+let globalDb: Database.Database | null = null;
+
+export function setGlobalDatabase(db: Database.Database): void {
+    globalDb = db;
+}
+
+export function getGlobalDatabase(): Database.Database {
+    if (!globalDb) {
+        throw new Error("Database not initialized");
+    }
+    return globalDb;
+}
+
 // 自定义错误类型用于去重检测
 export class DuplicateMessageError extends Error {
     constructor(messageId: string) {
@@ -34,6 +51,10 @@ export class SQLiteCaseRepository implements CaseRepository {
         this.db = new Database(dbPath);
         this.db.pragma("journal_mode = WAL");
         this.runMigrations();
+        
+        // Register as global database for API access
+        setGlobalDatabase(this.db);
+        
         console.log(`[SQLiteRepo] Database initialized at ${dbPath}`);
     }
 
