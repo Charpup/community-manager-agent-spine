@@ -1,36 +1,36 @@
-# Stage 1: Base with Build Tools (for native modules like better-sqlite3)
-FROM node:20-bookworm AS base
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
 WORKDIR /app
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
 
-# Stage 2: Install Dependencies
-FROM base AS dependencies
+# Copy package files
 COPY package*.json ./
-# 我们在这里先执行 npm install，利用 Docker 缓存
-# 只有 package.json 发生变化时，这一步才会重新执行
-RUN npm install
+RUN npm ci
 
-# Stage 3: Development (Hot Reloading)
-FROM dependencies AS development
-# 这里不需要 COPY . .，因为 docker-compose 会通过 volumes 挂载
-# 但为了容器独立运行的完整性，我们还是 COPY 一份
-COPY . .
-CMD ["npm", "run", "dev"]
-
-# Stage 4: Production (Build & Minimal Image)
-FROM dependencies AS build
+# Copy source
 COPY . .
 RUN npm run build
 
-FROM node:20-bookworm-slim AS production
+# Stage 2: Production
+FROM node:20-alpine
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY --from=build /app/dist ./dist
-# 注意：如果 production 需要 better-sqlite3，也需要重新安装它在 slim 镜像中
-# 或者直接在 base 阶段构建。目前我们先以开发模式为主。
-CMD ["npm", "start"]
+
+# Copy built files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+
+# Create data directory
+RUN mkdir -p /data
+
+# Environment
+ENV NODE_ENV=production
+ENV API_PORT=3001
+ENV SQLITE_PATH=/data/spine.db
+
+# Expose port
+EXPOSE 3001
+
+# Start command
+CMD ["node", "dist/main.js"]
