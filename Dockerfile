@@ -14,12 +14,18 @@ RUN npm run build
 # Stage 2: Production
 FROM node:20-alpine
 
+# Install sqlite
+RUN apk add --no-cache sqlite
+
 WORKDIR /app
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
+
+# Copy migrations file (needed for SQLite)
+COPY --from=builder /app/src/repo/migrations.sql ./dist/repo/migrations.sql
 
 # Create data directory
 RUN mkdir -p /data

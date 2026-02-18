@@ -12,13 +12,13 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Production (Nginx)
-FROM nginx:alpine
+FROM docker.io/library/nginx:alpine
 
 # Copy built files to nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-simple.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80

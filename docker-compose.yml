@@ -10,10 +10,18 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
+      - CHANNEL=sdk_backend
       - API_PORT=3001
       - SQLITE_PATH=/data/spine.db
+      - SDK_BACKEND_TOKEN=demo_token
+      - SDK_BACKEND_BASE_URL=http://localhost:8080
       - CRUISE_INTERVAL_MS=300000
       - CRUISE_REPORT_LANGUAGE=zh-CN
+    volumes:
+      - spine-data:/data
+    networks:
+      - spine-network
+    restart: unless-stopped
     volumes:
       - spine-data:/data
     networks:
